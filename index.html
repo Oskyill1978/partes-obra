@@ -18,7 +18,7 @@ header h1{font-size:1.3rem}
 .card h3{margin-bottom:12px;color:#1a56db}
 label{display:block;margin-bottom:4px;font-weight:500;font-size:.85rem;color:#555}
 input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:.95rem;margin-bottom:12px}
-textarea{min-height:80px;resize:vertical}
+textarea{min-height:80px;resize:vertical}h
 .btn{width:100%;padding:12px;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;transition:.2s}
 .btn-primary{background:#1a56db;color:#fff}
 .btn-primary:hover{background:#1544b8}
@@ -31,7 +31,7 @@ textarea{min-height:80px;resize:vertical}
 .badge{padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
 .badge-green{background:#d1fae5;color:#065f46}
 .badge-yellow{background:#fef3c7;color:#92400e}
-.hidden{display:none}
+.hidden{display:none!important}
 .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh}
 .login-screen h2{margin-bottom:24px;color:#1a56db}
 .login-screen input{max-width:300px;text-align:center;font-size:1.5rem;letter-spacing:8px}
@@ -140,11 +140,11 @@ th{background:#f9fafb;font-weight:600}
 </div>
 
 <div class="admin-nav">
-<button class="tab active" onclick="showAdminTab('dashboard')">Dashboard</button>
-<button class="tab" onclick="showAdminTab('partes')">Partes</button>
-<button class="tab" onclick="showAdminTab('trabajadores')">Trabajadores</button>
-<button class="tab" onclick="showAdminTab('obras')">Obras</button>
-<button class="tab" onclick="showAdminTab('empresas')">Empresas</button>
+<button class="tab active" onclick="showAdminTab(event,'dashboard')">Dashboard</button>
+<button class="tab" onclick="showAdminTab(event,'partes')">Partes</button>
+<button class="tab" onclick="showAdminTab(event,'trabajadores')">Trabajadores</button>
+<button class="tab" onclick="showAdminTab(event,'obras')">Obras</button>
+<button class="tab" onclick="showAdminTab(event,'empresas')">Empresas</button>
 </div>
 
 <div id="admin-dashboard">
@@ -347,9 +347,9 @@ const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='partes_'+new Date().toISOString().split('T')[0]+'.csv';a.click();
 }
 
-function showAdminTab(tab){
+function showAdminTab(e,tab){
 document.querySelectorAll('.admin-nav .tab').forEach(t=>t.classList.remove('active'));
-event.target.classList.add('active');
+e.target.classList.add('active');
 ['dashboard','partes','trabajadores','obras','empresas'].forEach(t=>document.getElementById('admin-'+t).classList.toggle('hidden',t!==tab));
 if(tab==='partes')loadAdminPartes();
 if(tab==='trabajadores')loadTrabajadores();

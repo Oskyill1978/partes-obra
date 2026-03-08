@@ -880,8 +880,8 @@ init();
 
     async function deleteTrabajador(id){
       if(!confirm('¿Seguro que quieres borrar este trabajador? Se eliminarán también sus partes.')) return;
-      const{error:err1}=await supabase.from('partes').delete().eq('trabajador_id',id);
-      const{error}=await supabase.from('trabajadores').delete().eq('id',id);
+      const{error:err1}=await sb.from('partes').delete().eq('trabajador_id',id);
+      const{error}=await sb.from('trabajadores').delete().eq('id',id);
       if(error){alert('Error: '+error.message);return;}
       alert('Trabajador eliminado');
       if(typeof loadTrabajadores==='function') loadTrabajadores();
@@ -890,7 +890,7 @@ init();
 
     async function deleteEncargado(id){
       if(!confirm('¿Seguro que quieres borrar este encargado?')) return;
-      const{error}=await supabase.from('encargados').delete().eq('id',id);
+      const{error}=await sb.from('encargados').delete().eq('id',id);
       if(error){alert('Error: '+error.message);return;}
       alert('Encargado eliminado');
       if(typeof loadEncargados==='function') loadEncargados();

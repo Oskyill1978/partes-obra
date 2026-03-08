@@ -618,7 +618,7 @@ async function loadEncFichajes(){
 const today=new Date().toISOString().split('T')[0];
 const{data}=await sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').eq('empresa_id',encEmpresaId).eq('fecha',today).is('hora_salida',null);
 const el=document.getElementById('enc-fichajes-abiertos');
-if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">No hay fichajes abiertos</p>';return}
+if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">No hay fichajes abiertos</p>';}
 el.innerHTML=data.map(p=>`<div class="fichaje-item"><div class="info"><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.obras?.nombre||'Sin obra'} | Entrada: ${p.hora_entrada}</small></div><div class="actions"><button class="btn-danger" onclick="cerrarFichajeId('${p.id}','enc')">Cerrar</button></div></div>`).join('');
 // Load selects
 const{data:trabs}=await sb.from('trabajadores').select('id,nombre,apellidos').eq('empresa_id',encEmpresaId).eq('activo',true);
@@ -741,7 +741,7 @@ async function loadAdminFichajes(){
 const today=new Date().toISOString().split('T')[0];
 const{data}=await sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre),empresas(nombre)').eq('fecha',today).is('hora_salida',null);
 const el=document.getElementById('admin-fichajes-abiertos');
-if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">No hay fichajes abiertos</p>';return}
+if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">No hay fichajes abiertos</p>';}
 el.innerHTML=data.map(p=>`<div class="fichaje-item"><div class="info"><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.empresas?.nombre||'-'} | ${p.obras?.nombre||'Sin obra'} | Entrada: ${p.hora_entrada}</small></div><div class="actions"><button class="btn-danger" onclick="cerrarFichajeId('${p.id}','admin')">Cerrar</button></div></div>`).join('');
 // Load empresa select for fichar
 const{data:emps}=await sb.from('empresas').select('id,nombre').eq('activa',true);

@@ -445,6 +445,7 @@ const{data:emp}=await sb.from('empresas').select('nombre').eq('id',empresaId).si
 document.getElementById('enc-name').textContent=data.nombre+' '+data.apellidos+' - '+(emp?.nombre||'');
 document.getElementById('encargado-login').classList.add('hidden');
       document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('login-screen').classList.add('hidden');
 document.getElementById('app-encargado').style.display='block';
 loadEncDashboard();
 }
@@ -452,6 +453,7 @@ loadEncDashboard();
 function loginAdmin(){
 if(document.getElementById('admin-pass').value!==ADMIN_PASS){alert('Contrasena incorrecta');return}
 document.getElementById('admin-login').classList.add('hidden');
+document.getElementById('login-screen').classList.add('hidden');
 document.getElementById('app-admin').style.display='block';
 loadDashboard();
 }

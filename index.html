@@ -444,6 +444,7 @@ currentEncargado=data;encEmpresaId=empresaId;
 const{data:emp}=await sb.from('empresas').select('nombre').eq('id',empresaId).single();
 document.getElementById('enc-name').textContent=data.nombre+' '+data.apellidos+' - '+(emp?.nombre||'');
 document.getElementById('encargado-login').classList.add('hidden');
+      document.getElementById('login-screen').classList.add('hidden');
 document.getElementById('app-encargado').style.display='block';
 loadEncDashboard();
 }
@@ -594,12 +595,19 @@ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=
 }
 
 function showEncTab(e,tab){
-document.querySelectorAll('.enc-nav .tab').forEach(t=>t.classList.remove('active'));
-e.target.classList.add('active');
-['dashboard','partes','fichajes','trabajadores','obras'].forEach(t=>document.getElementById('enc-'+t).classList.toggle('hidden',t!==tab));
-if(tab==='partes')loadEncPartes();if(tab==='trabajadores')loadEncTrab();if(tab==='obras')loadEncObras();
-if(tab==='dashboard')loadEncDashboard();if(tab==='fichajes')loadEncFichajes();
-}
+      const tabs=['enc-dashboard','enc-partes','enc-fichajes','enc-trabajadores','enc-obras'];
+      tabs.forEach(t=>{const el=document.getElementById(t);if(el)el.classList.add('hidden');});
+      const target=document.getElementById(tab);
+      if(target)target.classList.remove('hidden');
+      document.querySelectorAll('#app-encargado button').forEach(b=>{
+        if(b.parentElement&&!b.parentElement.id){b.style.background='';b.style.color='';}
+      });
+      if(e&&e.target){e.target.style.background='#7c3aed';e.target.style.color='#fff';}
+      if(tab==='enc-trabajadores')loadEncTrab();
+      if(tab==='enc-partes')loadEncPartes();
+      if(tab==='enc-fichajes')loadEncFichajes();
+      if(tab==='enc-obras')loadEncObras();
+    }
 
 async function loadEncFichajes(){
 const today=new Date().toISOString().split('T')[0];
@@ -636,7 +644,7 @@ const{data}=await sb.from('trabajadores').select('*').eq('empresa_id',encEmpresa
 const el=document.getElementById('enc-lista-trab');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin trabajadores</p>';return}
 el.innerHTML='<table><thead><tr><th>Nombre</th><th>DNI</th><th>PIN</th><th></th></tr></thead><tbody>'+
-data.map(t=>`<tr><td>${t.nombre} ${t.apellidos}</td><td>${t.dni||'-'}</td><td>${t.pin||'-'}</td><td><button class="btn-sm btn-danger" onclick="deleteTrabajador(${t.id})">Borrar</button></td></tr>`).join('')+'</tbody></table>';
+data.map(t=>`<tr><td>${t.nombre} ${t.apellidos}</td><td>${t.dni||'-'}</td><td>${t.pin||'-'}</td><td><button class="btn-sm btn-danger" onclick="deleteTrabajador('${t.id}')">Borrar</button></td></tr>`).join('')+'</tbody></table>';
 }
 
 async function encGuardarObra(){
@@ -762,13 +770,21 @@ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=
 }
 
 function showAdminTab(e,tab){
-document.querySelectorAll('#app-admin .admin-nav .tab').forEach(t=>t.classList.remove('active'));
-e.target.classList.add('active');
-['dashboard','partes','fichajes','trabajadores','obras','empresas','encargados'].forEach(t=>document.getElementById('admin-'+t).classList.toggle('hidden',t!==tab));
-if(tab==='partes')loadAdminPartes();if(tab==='trabajadores')loadTrabajadores();if(tab==='obras')loadObras();
-if(tab==='empresas')loadEmpresas();if(tab==='encargados')loadEncargados();if(tab==='dashboard')loadDashboard();
-if(tab==='fichajes')loadAdminFichajes();
-}
+      const tabs=['admin-dashboard','admin-partes','admin-fichajes','admin-trabajadores','admin-obras','admin-empresas','admin-encargados'];
+      tabs.forEach(t=>{const el=document.getElementById(t);if(el)el.classList.add('hidden');});
+      const target=document.getElementById(tab);
+      if(target)target.classList.remove('hidden');
+      document.querySelectorAll('#app-admin button').forEach(b=>{
+        if(b.parentElement&&!b.parentElement.id){b.style.background='';b.style.color='';}
+      });
+      if(e&&e.target){e.target.style.background='#1d4ed8';e.target.style.color='#fff';}
+      if(tab==='admin-trabajadores')loadTrabajadores();
+      if(tab==='admin-partes')loadPartes();
+      if(tab==='admin-fichajes')loadFichajes();
+      if(tab==='admin-obras')loadObras();
+      if(tab==='admin-empresas')loadEmpresas();
+      if(tab==='admin-encargados')loadEncargados();
+    }
 
 function showFormTrabajador(){document.getElementById('form-trabajador').classList.toggle('hidden');loadEmpresasSelect('trab-empresa')}
 function showFormObra(){document.getElementById('form-obra').classList.toggle('hidden');loadEmpresasSelect('obra-empresa')}
@@ -795,7 +811,7 @@ const{data}=await sb.from('trabajadores').select('*,empresas(nombre)').eq('activ
 const el=document.getElementById('lista-trabajadores');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin trabajadores</p>';return}
 el.innerHTML='<table><thead><tr><th>Nombre</th><th>DNI</th><th>Empresa</th><th>PIN</th><th></th></tr></thead><tbody>'+
-data.map(t=>`<tr><td>${t.nombre} ${t.apellidos}</td><td>${t.dni||'-'}</td><td>${t.empresas?.nombre||'-'}</td><td>${t.pin||'-'}</td><td><button class="btn-sm btn-danger" onclick="deleteTrabajador(${t.id})">Borrar</button></td></tr>`).join('')+'</tbody></table>';
+data.map(t=>`<tr><td>${t.nombre} ${t.apellidos}</td><td>${t.dni||'-'}</td><td>${t.empresas?.nombre||'-'}</td><td>${t.pin||'-'}</td><td><button class="btn-sm btn-danger" onclick="deleteTrabajador('${t.id}')">Borrar</button></td></tr>`).join('')+'</tbody></table>';
 }
 
 async function guardarObra(){
@@ -844,7 +860,7 @@ const{data}=await sb.from('encargados').select('*,empresas(nombre)').eq('activo'
 const el=document.getElementById('lista-encargados');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin encargados</p>';return}
 el.innerHTML='<table><thead><tr><th>Nombre</th><th>Empresa</th><th>PIN</th><th>Email</th><th>Telefono</th><th></th></tr></thead><tbody>'+
-data.map(e=>`<tr><td>${e.nombre} ${e.apellidos}</td><td>${e.empresas?.nombre||'-'}</td><td>${e.pin||'-'}</td><td>${e.email||'-'}</td><td>${e.telefono||'-'}</td><td><button class="btn-sm btn-danger" onclick="deleteEncargado(${e.id})">Borrar</button></td></tr>`).join('')+'</tbody></table>';
+data.map(e=>`<tr><td>${e.nombre} ${e.apellidos}</td><td>${e.empresas?.nombre||'-'}</td><td>${e.pin||'-'}</td><td>${e.email||'-'}</td><td>${e.telefono||'-'}</td><td><button class="btn-sm btn-danger" onclick="deleteEncargado('${e.id}')">Borrar</button></td></tr>`).join('')+'</tbody></table>';
 }
 
 function showMsg(id,msg,type){

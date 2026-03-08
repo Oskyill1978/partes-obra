@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Partes de Obra</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#333}
@@ -26,6 +28,8 @@ textarea{min-height:80px;resize:vertical}
 .btn-danger{background:#dc2626;color:#fff;padding:8px 12px;width:auto;font-size:.85rem}
 .btn-encargado{background:#7c3aed;color:#fff}
 .btn-encargado:hover{background:#6d28d9}
+.btn-warning{background:#f59e0b;color:#fff}
+.btn-qr{background:#059669;color:#fff;padding:10px 16px;width:auto;font-size:.85rem;border:none;border-radius:6px;cursor:pointer}
 .row{display:flex;gap:12px}
 .row>*{flex:1}
 .parte-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #eee}
@@ -33,6 +37,7 @@ textarea{min-height:80px;resize:vertical}
 .badge{padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
 .badge-green{background:#d1fae5;color:#065f46}
 .badge-yellow{background:#fef3c7;color:#92400e}
+.badge-red{background:#fee2e2;color:#991b1b}
 .hidden{display:none!important}
 .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh}
 .login-screen h2{margin-bottom:24px;color:#1a56db}
@@ -57,21 +62,29 @@ th{background:#f9fafb;font-weight:600}
 .top-bar .user-info{font-size:.85rem;color:#666}
 .top-bar button{background:none;border:1px solid #ddd;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.8rem}
 .enc-header{color:#7c3aed}
+.alert-open{background:#fef3c7;border:2px solid #f59e0b;border-radius:8px;padding:16px;margin-bottom:12px;text-align:center}
+.alert-open h4{color:#92400e;margin-bottom:8px}
+.alert-open p{color:#78350f;font-size:.9rem}
+.alert-open .btn{margin-top:8px;width:auto;padding:8px 24px;display:inline-block}
+#qr-reader{width:100%;max-width:400px;margin:0 auto}
+#qr-reader video{border-radius:8px}
+.qr-code-img{display:block;margin:12px auto;border:2px solid #ddd;border-radius:8px;padding:8px;background:#fff}
+.fichaje-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #eee;gap:8px}
+.fichaje-item .info{flex:1}
+.fichaje-item .actions{display:flex;gap:6px}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center}
+.modal{background:#fff;border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h3{margin-bottom:16px;color:#1a56db}
 </style>
 </head>
 <body>
-<header>
-<h1>Partes de Obra</h1>
-</header>
+<header><h1>Partes de Obra</h1></header>
 <div class="container">
-
 <!-- LOGIN SCREEN -->
 <div id="login-screen" class="login-screen">
 <h2>Acceso Trabajador</h2>
 <label>Empresa</label>
-<select id="login-empresa" style="max-width:300px;margin-bottom:16px">
-<option value="">Selecciona empresa...</option>
-</select>
+<select id="login-empresa" style="max-width:300px;margin-bottom:16px"><option value="">Selecciona empresa...</option></select>
 <label>PIN de acceso</label>
 <input type="password" id="login-pin" maxlength="4" placeholder="****">
 <br>
@@ -87,9 +100,7 @@ th{background:#f9fafb;font-weight:600}
 <div id="encargado-login" class="login-screen hidden">
 <h2 class="enc-header">Acceso Encargado</h2>
 <label>Empresa</label>
-<select id="enc-login-empresa" style="max-width:300px;margin-bottom:16px">
-<option value="">Selecciona empresa...</option>
-</select>
+<select id="enc-login-empresa" style="max-width:300px;margin-bottom:16px"><option value="">Selecciona empresa...</option></select>
 <label>PIN de encargado</label>
 <input type="password" id="enc-login-pin" maxlength="6" placeholder="******" style="letter-spacing:6px">
 <br>
@@ -110,15 +121,40 @@ th{background:#f9fafb;font-weight:600}
 <button class="btn" style="max-width:300px;background:#e5e7eb" onclick="showWorkerLogin()">Volver</button>
 </div>
 
+<!-- QR SCANNER MODAL -->
+<div id="qr-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeQrScanner()">
+<div class="modal">
+<h3>Escanear QR de Obra</h3>
+<p style="margin-bottom:12px;font-size:.85rem;color:#666">Apunta la camara al codigo QR de la obra</p>
+<div id="qr-reader"></div>
+<div id="qr-result" style="margin-top:12px"></div>
+<button class="btn" style="background:#e5e7eb;margin-top:12px" onclick="closeQrScanner()">Cerrar</button>
+</div>
+</div>
+
+<!-- QR VIEW MODAL -->
+<div id="qr-view-modal" class="modal-overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+<div class="modal" style="text-align:center">
+<h3>Codigo QR de la Obra</h3>
+<p id="qr-view-obra-name" style="font-weight:600;margin-bottom:8px"></p>
+<canvas id="qr-canvas"></canvas>
+<p id="qr-view-code" style="font-size:.85rem;color:#666;margin-top:8px"></p>
+<button class="btn btn-primary" style="margin-top:12px;width:auto;padding:8px 24px" onclick="printQR()">Imprimir QR</button>
+<button class="btn" style="background:#e5e7eb;margin-top:8px;width:auto;padding:8px 24px" onclick="document.getElementById('qr-view-modal').classList.add('hidden')">Cerrar</button>
+</div>
+</div>
+
 <!-- WORKER APP -->
 <div id="app-worker">
 <div class="top-bar">
 <span class="user-info" id="worker-name"></span>
 <button onclick="logout()">Salir</button>
 </div>
+<div id="worker-alert"></div>
 <div class="tabs">
 <button class="tab active" onclick="showWorkerTab('nuevo')">Nuevo Parte</button>
 <button class="tab" onclick="showWorkerTab('historial')">Mis Partes</button>
+<button class="tab" onclick="showWorkerTab('qr')">Escanear QR</button>
 </div>
 <div id="worker-nuevo">
 <div class="card">
@@ -142,9 +178,13 @@ th{background:#f9fafb;font-weight:600}
 </div>
 </div>
 <div id="worker-historial" class="hidden">
+<div class="card"><h3>Mis Partes</h3><div id="historial-list"></div></div>
+</div>
+<div id="worker-qr" class="hidden">
 <div class="card">
-<h3>Mis Partes</h3>
-<div id="historial-list"></div>
+<h3>Fichaje por QR</h3>
+<p style="margin-bottom:12px;color:#666;font-size:.9rem">Escanea el codigo QR de la obra para fichar entrada o salida automaticamente.</p>
+<button class="btn btn-success" onclick="openQrScanner()">Abrir Camara</button>
 </div>
 </div>
 </div>
@@ -158,6 +198,7 @@ th{background:#f9fafb;font-weight:600}
 <div class="admin-nav enc-nav">
 <button class="tab active" onclick="showEncTab(event,'dashboard')">Dashboard</button>
 <button class="tab" onclick="showEncTab(event,'partes')">Partes</button>
+<button class="tab" onclick="showEncTab(event,'fichajes')">Fichajes</button>
 <button class="tab" onclick="showEncTab(event,'trabajadores')">Trabajadores</button>
 <button class="tab" onclick="showEncTab(event,'obras')">Obras</button>
 </div>
@@ -167,10 +208,7 @@ th{background:#f9fafb;font-weight:600}
 <div class="stat-card"><div class="num" id="enc-stat-trabajadores">0</div><div class="label">Trabajadores</div></div>
 <div class="stat-card"><div class="num" id="enc-stat-obras">0</div><div class="label">Obras activas</div></div>
 </div>
-<div class="card">
-<h3 class="enc-header">Partes recientes</h3>
-<div id="enc-partes-recientes"></div>
-</div>
+<div class="card"><h3 class="enc-header">Partes recientes</h3><div id="enc-partes-recientes"></div></div>
 </div>
 <div id="enc-partes" class="hidden">
 <div class="card">
@@ -181,6 +219,25 @@ th{background:#f9fafb;font-weight:600}
 </div>
 <button class="btn btn-encargado" style="margin-bottom:12px" onclick="encExportCSV()">Exportar CSV</button>
 <div style="overflow-x:auto"><table id="enc-tabla-partes"><thead><tr><th>Fecha</th><th>Trabajador</th><th>Obra</th><th>Entrada</th><th>Salida</th><th>Extras</th><th>Trabajo</th></tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+<div id="enc-fichajes" class="hidden">
+<div class="card">
+<h3 class="enc-header">Fichajes Activos</h3>
+<p style="font-size:.85rem;color:#666;margin-bottom:12px">Trabajadores con fichaje abierto hoy</p>
+<div id="enc-fichajes-abiertos"></div>
+</div>
+<div class="card">
+<h3 class="enc-header">Fichar por Trabajador</h3>
+<label>Trabajador</label>
+<select id="enc-fichar-trabajador"></select>
+<label>Obra</label>
+<select id="enc-fichar-obra"></select>
+<div class="row">
+<button class="btn btn-success" onclick="ficharPorTrabajador('enc')">Fichar Entrada</button>
+<button class="btn btn-danger" style="width:100%" onclick="cerrarFichajePorTrabajador('enc')">Cerrar Fichaje</button>
+</div>
+<div id="enc-fichar-msg"></div>
 </div>
 </div>
 <div id="enc-trabajadores" class="hidden">
@@ -219,6 +276,7 @@ th{background:#f9fafb;font-weight:600}
 <div class="admin-nav">
 <button class="tab active" onclick="showAdminTab(event,'dashboard')">Dashboard</button>
 <button class="tab" onclick="showAdminTab(event,'partes')">Partes</button>
+<button class="tab" onclick="showAdminTab(event,'fichajes')">Fichajes</button>
 <button class="tab" onclick="showAdminTab(event,'trabajadores')">Trabajadores</button>
 <button class="tab" onclick="showAdminTab(event,'obras')">Obras</button>
 <button class="tab" onclick="showAdminTab(event,'empresas')">Empresas</button>
@@ -231,10 +289,7 @@ th{background:#f9fafb;font-weight:600}
 <div class="stat-card"><div class="num" id="stat-obras">0</div><div class="label">Obras activas</div></div>
 <div class="stat-card"><div class="num" id="stat-empresas">0</div><div class="label">Empresas</div></div>
 </div>
-<div class="card">
-<h3>Partes recientes</h3>
-<div id="admin-partes-recientes"></div>
-</div>
+<div class="card"><h3>Partes recientes</h3><div id="admin-partes-recientes"></div></div>
 </div>
 <div id="admin-partes" class="hidden">
 <div class="card">
@@ -245,6 +300,27 @@ th{background:#f9fafb;font-weight:600}
 </div>
 <button class="btn btn-primary" style="margin-bottom:12px" onclick="exportCSV()">Exportar CSV</button>
 <div style="overflow-x:auto"><table id="tabla-partes"><thead><tr><th>Fecha</th><th>Trabajador</th><th>Obra</th><th>Entrada</th><th>Salida</th><th>Extras</th><th>Trabajo</th></tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+<div id="admin-fichajes" class="hidden">
+<div class="card">
+<h3>Fichajes Activos</h3>
+<p style="font-size:.85rem;color:#666;margin-bottom:12px">Trabajadores con fichaje abierto hoy (todas las empresas)</p>
+<div id="admin-fichajes-abiertos"></div>
+</div>
+<div class="card">
+<h3>Fichar por Trabajador</h3>
+<label>Empresa</label>
+<select id="admin-fichar-empresa" onchange="loadTrabajadoresParaFichar('admin')"></select>
+<label>Trabajador</label>
+<select id="admin-fichar-trabajador"></select>
+<label>Obra</label>
+<select id="admin-fichar-obra"></select>
+<div class="row">
+<button class="btn btn-success" onclick="ficharPorTrabajador('admin')">Fichar Entrada</button>
+<button class="btn btn-danger" style="width:100%" onclick="cerrarFichajePorTrabajador('admin')">Cerrar Fichaje</button>
+</div>
+<div id="admin-fichar-msg"></div>
 </div>
 </div>
 <div id="admin-trabajadores" class="hidden">
@@ -310,20 +386,14 @@ const SUPABASE_URL='https://xmafwwyyxpdzajhuaepp.supabase.co';
 const SUPABASE_KEY='sb_publishable_SgTb-fcdlLr3fwKDsw2jKw_21l_DNZq';
 const ADMIN_PASS='admin2026';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let currentWorker=null;
-let currentEmpresa=null;
-let currentEncargado=null;
-let encEmpresaId=null;
+let currentWorker=null;let currentEmpresa=null;let currentEncargado=null;let encEmpresaId=null;let qrScanner=null;
 
 async function init(){
 const{data}=await sb.from('empresas').select('id,nombre').eq('activa',true);
-const sel=document.getElementById('login-empresa');
-const sel2=document.getElementById('enc-login-empresa');
+['login-empresa','enc-login-empresa'].forEach(id=>{
+const sel=document.getElementById(id);
 sel.innerHTML='<option value="">Selecciona empresa...</option>';
-sel2.innerHTML='<option value="">Selecciona empresa...</option>';
-if(data)data.forEach(e=>{
-sel.innerHTML+=`<option value="${e.id}">${e.nombre}</option>`;
-sel2.innerHTML+=`<option value="${e.id}">${e.nombre}</option>`;
+if(data)data.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nombre}</option>`});
 });
 }
 
@@ -337,17 +407,31 @@ currentWorker=data;currentEmpresa=empresaId;
 document.getElementById('worker-name').textContent=data.nombre+' '+data.apellidos;
 document.getElementById('login-screen').classList.add('hidden');
 document.getElementById('app-worker').style.display='block';
-loadObrasWorker();loadHistorial();
+loadObrasWorker();loadHistorial();checkOpenFichaje();
+}
+
+async function checkOpenFichaje(){
+const today=new Date().toISOString().split('T')[0];
+const{data}=await sb.from('partes').select('*,obras(nombre)').eq('trabajador_id',currentWorker.id).eq('fecha',today).is('hora_salida',null);
+const el=document.getElementById('worker-alert');
+if(data&&data.length>0){
+const p=data[0];
+el.innerHTML=`<div class="alert-open"><h4>Tienes un fichaje abierto</h4><p>Obra: ${p.obras?.nombre||'Sin obra'} | Entrada: ${p.hora_entrada||'--'}</p><button class="btn btn-warning" onclick="cerrarMiFichaje('${p.id}')">Cerrar Fichaje Ahora</button></div>`;
+}else{el.innerHTML='';}
+}
+
+async function cerrarMiFichaje(parteId){
+const now=new Date();const hora=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+await sb.from('partes').update({hora_salida:hora}).eq('id',parteId);
+document.getElementById('worker-alert').innerHTML='<div class="msg msg-ok">Fichaje cerrado a las '+hora+'</div>';
+setTimeout(()=>document.getElementById('worker-alert').innerHTML='',3000);
+loadHistorial();
 }
 
 function showAdminLogin(){hideAllScreens();document.getElementById('admin-login').classList.remove('hidden')}
 function showWorkerLogin(){hideAllScreens();document.getElementById('login-screen').classList.remove('hidden')}
 function showEncargadoLogin(){hideAllScreens();document.getElementById('encargado-login').classList.remove('hidden')}
-function hideAllScreens(){
-document.getElementById('login-screen').classList.add('hidden');
-document.getElementById('admin-login').classList.add('hidden');
-document.getElementById('encargado-login').classList.add('hidden');
-}
+function hideAllScreens(){['login-screen','admin-login','encargado-login'].forEach(id=>document.getElementById(id).classList.add('hidden'))}
 
 async function loginEncargado(){
 const empresaId=document.getElementById('enc-login-empresa').value;
@@ -372,15 +456,62 @@ loadDashboard();
 
 function logout(){
 currentWorker=null;currentEmpresa=null;currentEncargado=null;encEmpresaId=null;
-document.getElementById('app-worker').style.display='none';
-document.getElementById('app-admin').style.display='none';
-document.getElementById('app-encargado').style.display='none';
+['app-worker','app-admin','app-encargado'].forEach(id=>document.getElementById(id).style.display='none');
 document.getElementById('login-screen').classList.remove('hidden');
-document.getElementById('login-pin').value='';
-document.getElementById('admin-pass').value='';
-document.getElementById('enc-login-pin').value='';
+['login-pin','admin-pass','enc-login-pin'].forEach(id=>document.getElementById(id).value='');
+document.getElementById('worker-alert').innerHTML='';
 }
 
+// === QR SCANNER ===
+function openQrScanner(){
+document.getElementById('qr-modal').classList.remove('hidden');
+document.getElementById('qr-result').innerHTML='';
+qrScanner=new Html5Qrcode('qr-reader');
+qrScanner.start({facingMode:'environment'},{fps:10,qrbox:250},onQrSuccess,()=>{}).catch(err=>{
+document.getElementById('qr-result').innerHTML='<div class="msg msg-err">Error al abrir camara: '+err+'</div>';
+});
+}
+
+function closeQrScanner(){
+if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner=null;}
+document.getElementById('qr-modal').classList.add('hidden');
+}
+
+async function onQrSuccess(code){
+closeQrScanner();
+const{data:obra}=await sb.from('obras').select('*').eq('codigo_qr',code).single();
+if(!obra){document.getElementById('qr-modal').classList.remove('hidden');document.getElementById('qr-result').innerHTML='<div class="msg msg-err">QR no reconocido</div>';return}
+const today=new Date().toISOString().split('T')[0];
+const{data:open}=await sb.from('partes').select('*').eq('trabajador_id',currentWorker.id).eq('fecha',today).is('hora_salida',null).eq('obra_id',obra.id);
+const now=new Date();const hora=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+if(open&&open.length>0){
+await sb.from('partes').update({hora_salida:hora}).eq('id',open[0].id);
+alert('Salida registrada en '+obra.nombre+' a las '+hora);
+}else{
+await sb.from('partes').insert({empresa_id:obra.empresa_id,obra_id:obra.id,trabajador_id:currentWorker.id,fecha:today,hora_entrada:hora});
+alert('Entrada registrada en '+obra.nombre+' a las '+hora);
+}
+checkOpenFichaje();loadHistorial();
+}
+
+function showQrCode(obraName,codigoQr){
+document.getElementById('qr-view-obra-name').textContent=obraName;
+document.getElementById('qr-view-code').textContent='Codigo: '+codigoQr;
+const canvas=document.getElementById('qr-canvas');
+QRCode.toCanvas(canvas,codigoQr,{width:250,margin:2},function(err){if(err)console.error(err)});
+document.getElementById('qr-view-modal').classList.remove('hidden');
+}
+
+function printQR(){
+const canvas=document.getElementById('qr-canvas');
+const name=document.getElementById('qr-view-obra-name').textContent;
+const code=document.getElementById('qr-view-code').textContent;
+const w=window.open('','_blank');
+w.document.write('<html><body style="text-align:center;font-family:sans-serif;padding:40px"><h2>'+name+'</h2><img src="'+canvas.toDataURL()+'" style="margin:20px"><p>'+code+'</p><p style="color:#999;font-size:12px">Partes de Obra - Escanear con la app</p></body></html>');
+w.document.close();w.print();
+}
+
+// === WORKER FUNCTIONS ===
 async function loadObrasWorker(){
 const{data}=await sb.from('obras').select('id,nombre').eq('empresa_id',currentEmpresa).eq('activa',true);
 const sel=document.getElementById('parte-obra');
@@ -397,22 +528,22 @@ observaciones:document.getElementById('parte-observaciones').value};
 const{error}=await sb.from('partes').insert(parte);
 if(error){showMsg('parte-msg','Error al guardar','err');return}
 showMsg('parte-msg','Parte guardado correctamente','ok');
-document.getElementById('parte-descripcion').value='';document.getElementById('parte-materiales').value='';
-document.getElementById('parte-observaciones').value='';document.getElementById('parte-extras').value='0';
-loadHistorial();
+['parte-descripcion','parte-materiales','parte-observaciones'].forEach(id=>document.getElementById(id).value='');
+document.getElementById('parte-extras').value='0';
+loadHistorial();checkOpenFichaje();
 }
 
 async function loadHistorial(){
 const{data}=await sb.from('partes').select('*,obras(nombre)').eq('trabajador_id',currentWorker.id).order('fecha',{ascending:false}).limit(20);
 const el=document.getElementById('historial-list');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">Sin partes todavia</p>';return}
-el.innerHTML=data.map(p=>`<div class="parte-item"><div><strong>${p.fecha}</strong><br><small>${p.obras?.nombre||'Sin obra'} | ${p.hora_entrada||'--'} - ${p.hora_salida||'--'}</small><br><small>${p.descripcion_trabajo||''}</small></div><span class="badge ${p.firmado?'badge-green':'badge-yellow'}">${p.firmado?'Firmado':'Pendiente'}</span></div>`).join('');
+el.innerHTML=data.map(p=>`<div class="parte-item"><div><strong>${p.fecha}</strong><br><small>${p.obras?.nombre||'Sin obra'} | ${p.hora_entrada||'--'} - ${p.hora_salida||'--'}</small><br><small>${p.descripcion_trabajo||''}</small></div><span class="badge ${p.hora_salida?'badge-green':'badge-red'}">${p.hora_salida?'Cerrado':'Abierto'}</span></div>`).join('');
 }
 
 function showWorkerTab(tab){
-document.querySelectorAll('#app-worker .tabs .tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='nuevo'?0:1)));
-document.getElementById('worker-nuevo').classList.toggle('hidden',tab!=='nuevo');
-document.getElementById('worker-historial').classList.toggle('hidden',tab!=='historial');
+const tabs=['nuevo','historial','qr'];
+document.querySelectorAll('#app-worker .tabs .tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===tab));
+tabs.forEach(t=>document.getElementById('worker-'+t).classList.toggle('hidden',t!==tab));
 }
 
 // === ENCARGADO FUNCTIONS ===
@@ -429,7 +560,7 @@ document.getElementById('enc-stat-obras').textContent=o.count||0;
 const{data}=await sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').eq('empresa_id',encEmpresaId).order('created_at',{ascending:false}).limit(5);
 const el=document.getElementById('enc-partes-recientes');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin partes recientes</p>';return}
-el.innerHTML=data.map(p=>`<div class="parte-item"><div><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.fecha} | ${p.obras?.nombre||'Sin obra'} | ${p.hora_entrada||'--'} - ${p.hora_salida||'--'}</small></div></div>`).join('');
+el.innerHTML=data.map(p=>`<div class="parte-item"><div><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.fecha} | ${p.obras?.nombre||'Sin obra'} | ${p.hora_entrada||'--'} - ${p.hora_salida||'--'}</small></div><span class="badge ${p.hora_salida?'badge-green':'badge-red'}">${p.hora_salida?'Cerrado':'Abierto'}</span></div>`).join('');
 loadEncFiltroObras();
 }
 
@@ -444,8 +575,7 @@ async function loadEncPartes(){
 let q=sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').eq('empresa_id',encEmpresaId).order('fecha',{ascending:false});
 const fecha=document.getElementById('enc-filtro-fecha').value;
 const obra=document.getElementById('enc-filtro-obra').value;
-if(fecha)q=q.eq('fecha',fecha);
-if(obra)q=q.eq('obra_id',obra);
+if(fecha)q=q.eq('fecha',fecha);if(obra)q=q.eq('obra_id',obra);
 const{data}=await q.limit(100);
 const tbody=document.querySelector('#enc-tabla-partes tbody');
 if(!data||data.length===0){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#999">Sin resultados</td></tr>';return}
@@ -463,11 +593,26 @@ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=
 function showEncTab(e,tab){
 document.querySelectorAll('.enc-nav .tab').forEach(t=>t.classList.remove('active'));
 e.target.classList.add('active');
-['dashboard','partes','trabajadores','obras'].forEach(t=>document.getElementById('enc-'+t).classList.toggle('hidden',t!==tab));
-if(tab==='partes')loadEncPartes();
-if(tab==='trabajadores')loadEncTrab();
-if(tab==='obras')loadEncObras();
-if(tab==='dashboard')loadEncDashboard();
+['dashboard','partes','fichajes','trabajadores','obras'].forEach(t=>document.getElementById('enc-'+t).classList.toggle('hidden',t!==tab));
+if(tab==='partes')loadEncPartes();if(tab==='trabajadores')loadEncTrab();if(tab==='obras')loadEncObras();
+if(tab==='dashboard')loadEncDashboard();if(tab==='fichajes')loadEncFichajes();
+}
+
+async function loadEncFichajes(){
+const today=new Date().toISOString().split('T')[0];
+const{data}=await sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').eq('empresa_id',encEmpresaId).eq('fecha',today).is('hora_salida',null);
+const el=document.getElementById('enc-fichajes-abiertos');
+if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">No hay fichajes abiertos</p>';return}
+el.innerHTML=data.map(p=>`<div class="fichaje-item"><div class="info"><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.obras?.nombre||'Sin obra'} | Entrada: ${p.hora_entrada}</small></div><div class="actions"><button class="btn-danger" onclick="cerrarFichajeId('${p.id}','enc')">Cerrar</button></div></div>`).join('');
+// Load selects
+const{data:trabs}=await sb.from('trabajadores').select('id,nombre,apellidos').eq('empresa_id',encEmpresaId).eq('activo',true);
+const selT=document.getElementById('enc-fichar-trabajador');
+selT.innerHTML='<option value="">Selecciona...</option>';
+if(trabs)trabs.forEach(t=>{selT.innerHTML+=`<option value="${t.id}">${t.nombre} ${t.apellidos}</option>`});
+const{data:obras}=await sb.from('obras').select('id,nombre').eq('empresa_id',encEmpresaId).eq('activa',true);
+const selO=document.getElementById('enc-fichar-obra');
+selO.innerHTML='<option value="">Selecciona...</option>';
+if(obras)obras.forEach(o=>{selO.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
 }
 
 function showEncFormTrab(){document.getElementById('enc-form-trab').classList.toggle('hidden')}
@@ -479,8 +624,7 @@ empresa_id:encEmpresaId,dni:document.getElementById('enc-trab-dni').value,pin:do
 if(!t.nombre||!t.apellidos){alert('Rellena nombre y apellidos');return}
 await sb.from('trabajadores').insert(t);
 document.getElementById('enc-form-trab').classList.add('hidden');
-document.getElementById('enc-trab-nombre').value='';document.getElementById('enc-trab-apellidos').value='';
-document.getElementById('enc-trab-dni').value='';document.getElementById('enc-trab-pin').value='';
+['enc-trab-nombre','enc-trab-apellidos','enc-trab-dni','enc-trab-pin'].forEach(id=>document.getElementById(id).value='');
 loadEncTrab();
 }
 
@@ -498,7 +642,7 @@ ubicacion:document.getElementById('enc-obra-ubicacion').value,fecha_inicio:docum
 if(!o.nombre){alert('Introduce nombre de obra');return}
 await sb.from('obras').insert(o);
 document.getElementById('enc-form-obra').classList.add('hidden');
-document.getElementById('enc-obra-nombre').value='';document.getElementById('enc-obra-ubicacion').value='';
+['enc-obra-nombre','enc-obra-ubicacion'].forEach(id=>document.getElementById(id).value='');
 loadEncObras();
 }
 
@@ -506,8 +650,55 @@ async function loadEncObras(){
 const{data}=await sb.from('obras').select('*').eq('empresa_id',encEmpresaId).eq('activa',true).order('nombre');
 const el=document.getElementById('enc-lista-obras');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin obras</p>';return}
-el.innerHTML='<table><thead><tr><th>Obra</th><th>Ubicacion</th><th>Inicio</th></tr></thead><tbody>'+
-data.map(o=>`<tr><td>${o.nombre}</td><td>${o.ubicacion||'-'}</td><td>${o.fecha_inicio||'-'}</td></tr>`).join('')+'</tbody></table>';
+el.innerHTML='<table><thead><tr><th>Obra</th><th>Ubicacion</th><th>Inicio</th><th>QR</th></tr></thead><tbody>'+
+data.map(o=>`<tr><td>${o.nombre}</td><td>${o.ubicacion||'-'}</td><td>${o.fecha_inicio||'-'}</td><td><button class="btn-qr" onclick="showQrCode('${o.nombre.replace(/'/g,"\\'")}','${o.codigo_qr}')">Ver QR</button></td></tr>`).join('')+'</tbody></table>';
+}
+
+// === FICHAJE POR ADMIN/ENCARGADO ===
+async function ficharPorTrabajador(role){
+const prefix=role==='admin'?'admin':'enc';
+const trabId=document.getElementById(prefix+'-fichar-trabajador').value;
+const obraId=document.getElementById(prefix+'-fichar-obra').value;
+if(!trabId){showMsg(prefix+'-fichar-msg','Selecciona un trabajador','err');return}
+const today=new Date().toISOString().split('T')[0];
+const now=new Date();const hora=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+const empId=role==='admin'?document.getElementById('admin-fichar-empresa').value:encEmpresaId;
+await sb.from('partes').insert({empresa_id:empId,obra_id:obraId||null,trabajador_id:trabId,fecha:today,hora_entrada:hora});
+showMsg(prefix+'-fichar-msg','Entrada registrada a las '+hora,'ok');
+if(role==='admin')loadAdminFichajes();else loadEncFichajes();
+}
+
+async function cerrarFichajePorTrabajador(role){
+const prefix=role==='admin'?'admin':'enc';
+const trabId=document.getElementById(prefix+'-fichar-trabajador').value;
+if(!trabId){showMsg(prefix+'-fichar-msg','Selecciona un trabajador','err');return}
+const today=new Date().toISOString().split('T')[0];
+const now=new Date();const hora=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+const{data}=await sb.from('partes').select('id').eq('trabajador_id',trabId).eq('fecha',today).is('hora_salida',null).limit(1);
+if(!data||data.length===0){showMsg(prefix+'-fichar-msg','Este trabajador no tiene fichaje abierto','err');return}
+await sb.from('partes').update({hora_salida:hora}).eq('id',data[0].id);
+showMsg(prefix+'-fichar-msg','Fichaje cerrado a las '+hora,'ok');
+if(role==='admin')loadAdminFichajes();else loadEncFichajes();
+}
+
+async function cerrarFichajeId(id,role){
+const now=new Date();const hora=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+await sb.from('partes').update({hora_salida:hora}).eq('id',id);
+if(role==='admin')loadAdminFichajes();else loadEncFichajes();
+}
+
+async function loadTrabajadoresParaFichar(role){
+const prefix=role==='admin'?'admin':'enc';
+const empId=role==='admin'?document.getElementById('admin-fichar-empresa').value:encEmpresaId;
+if(!empId)return;
+const{data:trabs}=await sb.from('trabajadores').select('id,nombre,apellidos').eq('empresa_id',empId).eq('activo',true);
+const selT=document.getElementById(prefix+'-fichar-trabajador');
+selT.innerHTML='<option value="">Selecciona...</option>';
+if(trabs)trabs.forEach(t=>{selT.innerHTML+=`<option value="${t.id}">${t.nombre} ${t.apellidos}</option>`});
+const{data:obras}=await sb.from('obras').select('id,nombre').eq('empresa_id',empId).eq('activa',true);
+const selO=document.getElementById(prefix+'-fichar-obra');
+selO.innerHTML='<option value="">Selecciona...</option>';
+if(obras)obras.forEach(o=>{selO.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
 }
 
 // === ADMIN FUNCTIONS ===
@@ -526,8 +717,21 @@ document.getElementById('stat-empresas').textContent=e.count||0;
 const{data}=await sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').order('created_at',{ascending:false}).limit(5);
 const el=document.getElementById('admin-partes-recientes');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin partes recientes</p>';return}
-el.innerHTML=data.map(p=>`<div class="parte-item"><div><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.fecha} | ${p.obras?.nombre||'Sin obra'} | ${p.hora_entrada||'--'} - ${p.hora_salida||'--'}</small></div></div>`).join('');
+el.innerHTML=data.map(p=>`<div class="parte-item"><div><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.fecha} | ${p.obras?.nombre||'Sin obra'} | ${p.hora_entrada||'--'} - ${p.hora_salida||'--'}</small></div><span class="badge ${p.hora_salida?'badge-green':'badge-red'}">${p.hora_salida?'Cerrado':'Abierto'}</span></div>`).join('');
 loadFiltroEmpresas();
+}
+
+async function loadAdminFichajes(){
+const today=new Date().toISOString().split('T')[0];
+const{data}=await sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre),empresas(nombre)').eq('fecha',today).is('hora_salida',null);
+const el=document.getElementById('admin-fichajes-abiertos');
+if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">No hay fichajes abiertos</p>';return}
+el.innerHTML=data.map(p=>`<div class="fichaje-item"><div class="info"><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.empresas?.nombre||'-'} | ${p.obras?.nombre||'Sin obra'} | Entrada: ${p.hora_entrada}</small></div><div class="actions"><button class="btn-danger" onclick="cerrarFichajeId('${p.id}','admin')">Cerrar</button></div></div>`).join('');
+// Load empresa select for fichar
+const{data:emps}=await sb.from('empresas').select('id,nombre').eq('activa',true);
+const selE=document.getElementById('admin-fichar-empresa');
+selE.innerHTML='<option value="">Selecciona empresa...</option>';
+if(emps)emps.forEach(e=>{selE.innerHTML+=`<option value="${e.id}">${e.nombre}</option>`});
 }
 
 async function loadFiltroEmpresas(){
@@ -539,10 +743,8 @@ if(data)data.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nombre}</op
 
 async function loadAdminPartes(){
 let q=sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').order('fecha',{ascending:false});
-const fecha=document.getElementById('filtro-fecha').value;
-const emp=document.getElementById('filtro-empresa').value;
-if(fecha)q=q.eq('fecha',fecha);
-if(emp)q=q.eq('empresa_id',emp);
+const fecha=document.getElementById('filtro-fecha').value;const emp=document.getElementById('filtro-empresa').value;
+if(fecha)q=q.eq('fecha',fecha);if(emp)q=q.eq('empresa_id',emp);
 const{data}=await q.limit(100);
 const tbody=document.querySelector('#tabla-partes tbody');
 if(!data||data.length===0){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#999">Sin resultados</td></tr>';return}
@@ -550,8 +752,7 @@ tbody.innerHTML=data.map(p=>`<tr><td>${p.fecha}</td><td>${p.trabajadores?.nombre
 }
 
 function exportCSV(){
-const table=document.getElementById('tabla-partes');
-const rows=[...table.querySelectorAll('tr')];
+const table=document.getElementById('tabla-partes');const rows=[...table.querySelectorAll('tr')];
 const csv=rows.map(r=>[...r.querySelectorAll('th,td')].map(c=>'"'+c.textContent.replace(/"/g,'""')+'"').join(',')).join('\n');
 const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='partes_'+new Date().toISOString().split('T')[0]+'.csv';a.click();
@@ -560,13 +761,10 @@ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=
 function showAdminTab(e,tab){
 document.querySelectorAll('#app-admin .admin-nav .tab').forEach(t=>t.classList.remove('active'));
 e.target.classList.add('active');
-['dashboard','partes','trabajadores','obras','empresas','encargados'].forEach(t=>document.getElementById('admin-'+t).classList.toggle('hidden',t!==tab));
-if(tab==='partes')loadAdminPartes();
-if(tab==='trabajadores')loadTrabajadores();
-if(tab==='obras')loadObras();
-if(tab==='empresas')loadEmpresas();
-if(tab==='encargados')loadEncargados();
-if(tab==='dashboard')loadDashboard();
+['dashboard','partes','fichajes','trabajadores','obras','empresas','encargados'].forEach(t=>document.getElementById('admin-'+t).classList.toggle('hidden',t!==tab));
+if(tab==='partes')loadAdminPartes();if(tab==='trabajadores')loadTrabajadores();if(tab==='obras')loadObras();
+if(tab==='empresas')loadEmpresas();if(tab==='encargados')loadEncargados();if(tab==='dashboard')loadDashboard();
+if(tab==='fichajes')loadAdminFichajes();
 }
 
 function showFormTrabajador(){document.getElementById('form-trabajador').classList.toggle('hidden');loadEmpresasSelect('trab-empresa')}
@@ -609,8 +807,8 @@ async function loadObras(){
 const{data}=await sb.from('obras').select('*,empresas(nombre)').eq('activa',true).order('nombre');
 const el=document.getElementById('lista-obras');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin obras</p>';return}
-el.innerHTML='<table><thead><tr><th>Obra</th><th>Ubicacion</th><th>Empresa</th><th>Inicio</th></tr></thead><tbody>'+
-data.map(o=>`<tr><td>${o.nombre}</td><td>${o.ubicacion||'-'}</td><td>${o.empresas?.nombre||'-'}</td><td>${o.fecha_inicio||'-'}</td></tr>`).join('')+'</tbody></table>';
+el.innerHTML='<table><thead><tr><th>Obra</th><th>Ubicacion</th><th>Empresa</th><th>Inicio</th><th>QR</th></tr></thead><tbody>'+
+data.map(o=>`<tr><td>${o.nombre}</td><td>${o.ubicacion||'-'}</td><td>${o.empresas?.nombre||'-'}</td><td>${o.fecha_inicio||'-'}</td><td><button class="btn-qr" onclick="showQrCode('${o.nombre.replace(/'/g,"\\'")}','${o.codigo_qr}')">Ver QR</button></td></tr>`).join('')+'</tbody></table>';
 }
 
 async function guardarEmpresa(){

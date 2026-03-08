@@ -26,6 +26,7 @@ textarea{min-height:80px;resize:vertical}
 .btn-primary:hover{background:#1544b8}
 .btn-success{background:#059669;color:#fff}
 .btn-danger{background:#dc2626;color:#fff;padding:8px 12px;width:auto;font-size:.85rem}
+      .btn-sm{padding:4px 8px;font-size:12px}
 .btn-encargado{background:#7c3aed;color:#fff}
 .btn-encargado:hover{background:#6d28d9}
 .btn-warning{background:#f59e0b;color:#fff}
@@ -634,8 +635,8 @@ async function loadEncTrab(){
 const{data}=await sb.from('trabajadores').select('*').eq('empresa_id',encEmpresaId).eq('activo',true).order('nombre');
 const el=document.getElementById('enc-lista-trab');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin trabajadores</p>';return}
-el.innerHTML='<table><thead><tr><th>Nombre</th><th>DNI</th><th>PIN</th></tr></thead><tbody>'+
-data.map(t=>`<tr><td>${t.nombre} ${t.apellidos}</td><td>${t.dni||'-'}</td><td>${t.pin||'-'}</td></tr>`).join('')+'</tbody></table>';
+el.innerHTML='<table><thead><tr><th>Nombre</th><th>DNI</th><th>PIN</th><th></th></tr></thead><tbody>'+
+data.map(t=>`<tr><td>${t.nombre} ${t.apellidos}</td><td>${t.dni||'-'}</td><td>${t.pin||'-'}</td><td><button class="btn-sm btn-danger" onclick="deleteTrabajador(${t.id})">Borrar</button></td></tr>`).join('')+'</tbody></table>';
 }
 
 async function encGuardarObra(){
@@ -793,8 +794,8 @@ async function loadTrabajadores(){
 const{data}=await sb.from('trabajadores').select('*,empresas(nombre)').eq('activo',true).order('nombre');
 const el=document.getElementById('lista-trabajadores');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin trabajadores</p>';return}
-el.innerHTML='<table><thead><tr><th>Nombre</th><th>DNI</th><th>Empresa</th><th>PIN</th></tr></thead><tbody>'+
-data.map(t=>`<tr><td>${t.nombre} ${t.apellidos}</td><td>${t.dni||'-'}</td><td>${t.empresas?.nombre||'-'}</td><td>${t.pin||'-'}</td></tr>`).join('')+'</tbody></table>';
+el.innerHTML='<table><thead><tr><th>Nombre</th><th>DNI</th><th>Empresa</th><th>PIN</th><th></th></tr></thead><tbody>'+
+data.map(t=>`<tr><td>${t.nombre} ${t.apellidos}</td><td>${t.dni||'-'}</td><td>${t.empresas?.nombre||'-'}</td><td>${t.pin||'-'}</td><td><button class="btn-sm btn-danger" onclick="deleteTrabajador(${t.id})">Borrar</button></td></tr>`).join('')+'</tbody></table>';
 }
 
 async function guardarObra(){
@@ -842,8 +843,8 @@ async function loadEncargados(){
 const{data}=await sb.from('encargados').select('*,empresas(nombre)').eq('activo',true).order('nombre');
 const el=document.getElementById('lista-encargados');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin encargados</p>';return}
-el.innerHTML='<table><thead><tr><th>Nombre</th><th>Empresa</th><th>PIN</th><th>Email</th><th>Telefono</th></tr></thead><tbody>'+
-data.map(e=>`<tr><td>${e.nombre} ${e.apellidos}</td><td>${e.empresas?.nombre||'-'}</td><td>${e.pin||'-'}</td><td>${e.email||'-'}</td><td>${e.telefono||'-'}</td></tr>`).join('')+'</tbody></table>';
+el.innerHTML='<table><thead><tr><th>Nombre</th><th>Empresa</th><th>PIN</th><th>Email</th><th>Telefono</th><th></th></tr></thead><tbody>'+
+data.map(e=>`<tr><td>${e.nombre} ${e.apellidos}</td><td>${e.empresas?.nombre||'-'}</td><td>${e.pin||'-'}</td><td>${e.email||'-'}</td><td>${e.telefono||'-'}</td><td><button class="btn-sm btn-danger" onclick="deleteEncargado(${e.id})">Borrar</button></td></tr>`).join('')+'</tbody></table>';
 }
 
 function showMsg(id,msg,type){
@@ -853,6 +854,26 @@ setTimeout(()=>el.innerHTML='',3000);
 }
 
 init();
-</script>
+
+
+    async function deleteTrabajador(id){
+      if(!confirm('¿Seguro que quieres borrar este trabajador? Se eliminarán también sus partes.')) return;
+      const{error:err1}=await supabase.from('partes').delete().eq('trabajador_id',id);
+      const{error}=await supabase.from('trabajadores').delete().eq('id',id);
+      if(error){alert('Error: '+error.message);return;}
+      alert('Trabajador eliminado');
+      if(typeof loadTrabajadores==='function') loadTrabajadores();
+      if(typeof loadEncTrab==='function') loadEncTrab();
+    }
+
+    async function deleteEncargado(id){
+      if(!confirm('¿Seguro que quieres borrar este encargado?')) return;
+      const{error}=await supabase.from('encargados').delete().eq('id',id);
+      if(error){alert('Error: '+error.message);return;}
+      alert('Encargado eliminado');
+      if(typeof loadEncargados==='function') loadEncargados();
+    }
+
+    </script>
 </body>
 </html>

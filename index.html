@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Partes de Obra</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#333}
+.container{max-width:800px;margin:0 auto;padding:16px}
+header{background:#1a56db;color:#fff;padding:16px;text-align:center;position:sticky;top:0;z-index:10}
+header h1{font-size:1.3rem}
+.tabs{display:flex;background:#fff;border-radius:8px;margin:16px 0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.tab{flex:1;padding:12px;text-align:center;cursor:pointer;border:none;background:none;font-size:.9rem;font-weight:500;transition:.2s}
+.tab.active{background:#1a56db;color:#fff}
+.card{background:#fff;border-radius:8px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.card h3{margin-bottom:12px;color:#1a56db}
+label{display:block;margin-bottom:4px;font-weight:500;font-size:.85rem;color:#555}
+input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:.95rem;margin-bottom:12px}
+textarea{min-height:80px;resize:vertical}
+.btn{width:100%;padding:12px;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer;transition:.2s}
+.btn-primary{background:#1a56db;color:#fff}
+.btn-primary:hover{background:#1544b8}
+.btn-success{background:#059669;color:#fff}
+.btn-danger{background:#dc2626;color:#fff;padding:8px 12px;width:auto;font-size:.85rem}
+.row{display:flex;gap:12px}
+.row>*{flex:1}
+.parte-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #eee}
+.parte-item:last-child{border:none}
+.badge{padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-yellow{background:#fef3c7;color:#92400e}
+.hidden{display:none}
+.login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh}
+.login-screen h2{margin-bottom:24px;color:#1a56db}
+.login-screen input{max-width:300px;text-align:center;font-size:1.5rem;letter-spacing:8px}
+.login-screen select{max-width:300px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-card{background:#fff;padding:12px;border-radius:8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.stat-card .num{font-size:1.8rem;font-weight:700;color:#1a56db}
+.stat-card .label{font-size:.8rem;color:#666}
+.admin-nav{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.admin-nav .tab{background:#e5e7eb;border-radius:6px;padding:8px 16px;flex:none;font-size:.85rem}
+.admin-nav .tab.active{background:#1a56db;color:#fff}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th,td{padding:8px;text-align:left;border-bottom:1px solid #eee}
+th{background:#f9fafb;font-weight:600}
+.msg{padding:12px;border-radius:6px;margin-bottom:12px;text-align:center}
+.msg-ok{background:#d1fae5;color:#065f46}
+.msg-err{background:#fee2e2;color:#991b1b}
+#app-worker,#app-admin{display:none}
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 0}
+.top-bar .user-info{font-size:.85rem;color:#666}
+.top-bar button{background:none;border:1px solid #ddd;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.8rem}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Partes de Obra</h1>
+</header>
+
+<div class="container">
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="login-screen">
+<h2>Acceso Trabajador</h2>
+<label>Empresa</label>
+<select id="login-empresa" style="max-width:300px;margin-bottom:16px">
+<option value="">Selecciona empresa...</option>
+</select>
+<label>PIN de acceso</label>
+<input type="password" id="login-pin" maxlength="4" placeholder="****">
+<br>
+<button class="btn btn-primary" style="max-width:300px" onclick="loginWorker()">Entrar</button>
+<br><br>
+<button class="btn" style="max-width:300px;background:#e5e7eb" onclick="showAdminLogin()">Acceso Admin</button>
+<div id="login-msg"></div>
+</div>
+
+<!-- ADMIN LOGIN -->
+<div id="admin-login" class="login-screen hidden">
+<h2>Panel Admin</h2>
+<label>Contrasena admin</label>
+<input type="password" id="admin-pass" placeholder="Contrasena">
+<br>
+<button class="btn btn-primary" style="max-width:300px" onclick="loginAdmin()">Entrar como Admin</button>
+<br>
+<button class="btn" style="max-width:300px;background:#e5e7eb" onclick="showWorkerLogin()">Volver</button>
+</div>
+
+<!-- WORKER APP -->
+<div id="app-worker">
+<div class="top-bar">
+<span class="user-info" id="worker-name"></span>
+<button onclick="logout()">Salir</button>
+</div>
+
+<div class="tabs">
+<button class="tab active" onclick="showWorkerTab('nuevo')">Nuevo Parte</button>
+<button class="tab" onclick="showWorkerTab('historial')">Mis Partes</button>
+</div>
+
+<div id="worker-nuevo">
+<div class="card">
+<h3>Nuevo Parte de Trabajo</h3>
+<label>Obra</label>
+<select id="parte-obra"></select>
+<div class="row">
+<div><label>Hora entrada</label><input type="time" id="parte-entrada"></div>
+<div><label>Hora salida</label><input type="time" id="parte-salida"></div>
+</div>
+<label>Horas extra</label>
+<input type="number" id="parte-extras" value="0" min="0" step="0.5">
+<label>Trabajo realizado</label>
+<textarea id="parte-descripcion" placeholder="Describe el trabajo realizado..."></textarea>
+<label>Materiales usados</label>
+<textarea id="parte-materiales" placeholder="Materiales utilizados..."></textarea>
+<label>Observaciones</label>
+<textarea id="parte-observaciones" placeholder="Notas adicionales..."></textarea>
+<button class="btn btn-success" onclick="guardarParte()">Guardar Parte</button>
+<div id="parte-msg"></div>
+</div>
+</div>
+
+<div id="worker-historial" class="hidden">
+<div class="card">
+<h3>Mis Partes</h3>
+<div id="historial-list"></div>
+</div>
+</div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="app-admin">
+<div class="top-bar">
+<span class="user-info">Admin</span>
+<button onclick="logout()">Salir</button>
+</div>
+
+<div class="admin-nav">
+<button class="tab active" onclick="showAdminTab('dashboard')">Dashboard</button>
+<button class="tab" onclick="showAdminTab('partes')">Partes</button>
+<button class="tab" onclick="showAdminTab('trabajadores')">Trabajadores</button>
+<button class="tab" onclick="showAdminTab('obras')">Obras</button>
+<button class="tab" onclick="showAdminTab('empresas')">Empresas</button>
+</div>
+
+<div id="admin-dashboard">
+<div class="stats">
+<div class="stat-card"><div class="num" id="stat-partes">0</div><div class="label">Partes hoy</div></div>
+<div class="stat-card"><div class="num" id="stat-trabajadores">0</div><div class="label">Trabajadores</div></div>
+<div class="stat-card"><div class="num" id="stat-obras">0</div><div class="label">Obras activas</div></div>
+<div class="stat-card"><div class="num" id="stat-empresas">0</div><div class="label">Empresas</div></div>
+</div>
+<div class="card">
+<h3>Partes recientes</h3>
+<div id="admin-partes-recientes"></div>
+</div>
+</div>
+
+<div id="admin-partes" class="hidden">
+<div class="card">
+<h3>Todos los Partes</h3>
+<div class="row" style="margin-bottom:12px">
+<div><label>Filtrar por fecha</label><input type="date" id="filtro-fecha" onchange="loadAdminPartes()"></div>
+<div><label>Filtrar por empresa</label><select id="filtro-empresa" onchange="loadAdminPartes()"><option value="">Todas</option></select></div>
+</div>
+<button class="btn btn-primary" style="margin-bottom:12px" onclick="exportCSV()">Exportar CSV</button>
+<div style="overflow-x:auto"><table id="tabla-partes"><thead><tr><th>Fecha</th><th>Trabajador</th><th>Obra</th><th>Entrada</th><th>Salida</th><th>Extras</th><th>Trabajo</th></tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+
+<div id="admin-trabajadores" class="hidden">
+<div class="card">
+<h3>Trabajadores</h3>
+<button class="btn btn-primary" style="margin-bottom:12px" onclick="showFormTrabajador()">+ Nuevo Trabajador</button>
+<div id="form-trabajador" class="hidden" style="border:1px solid #ddd;padding:12px;border-radius:6px;margin-bottom:12px">
+<div class="row"><div><label>Nombre</label><input id="trab-nombre"></div><div><label>Apellidos</label><input id="trab-apellidos"></div></div>
+<label>Empresa</label><select id="trab-empresa"></select>
+<div class="row"><div><label>DNI</label><input id="trab-dni"></div><div><label>PIN</label><input id="trab-pin" maxlength="4"></div></div>
+<button class="btn btn-success" onclick="guardarTrabajador()">Guardar</button>
+</div>
+<div id="lista-trabajadores"></div>
+</div>
+</div>
+
+<div id="admin-obras" class="hidden">
+<div class="card">
+<h3>Obras</h3>
+<button class="btn btn-primary" style="margin-bottom:12px" onclick="showFormObra()">+ Nueva Obra</button>
+<div id="form-obra" class="hidden" style="border:1px solid #ddd;padding:12px;border-radius:6px;margin-bottom:12px">
+<label>Empresa</label><select id="obra-empresa"></select>
+<label>Nombre de la obra</label><input id="obra-nombre">
+<label>Ubicacion</label><input id="obra-ubicacion">
+<label>Fecha inicio</label><input type="date" id="obra-inicio">
+<button class="btn btn-success" onclick="guardarObra()">Guardar</button>
+</div>
+<div id="lista-obras"></div>
+</div>
+</div>
+
+<div id="admin-empresas" class="hidden">
+<div class="card">
+<h3>Empresas</h3>
+<button class="btn btn-primary" style="margin-bottom:12px" onclick="showFormEmpresa()">+ Nueva Empresa</button>
+<div id="form-empresa" class="hidden" style="border:1px solid #ddd;padding:12px;border-radius:6px;margin-bottom:12px">
+<label>Nombre</label><input id="emp-nombre">
+<div class="row"><div><label>CIF</label><input id="emp-cif"></div><div><label>Telefono</label><input id="emp-telefono"></div></div>
+<label>Email</label><input id="emp-email">
+<label>Direccion</label><input id="emp-direccion">
+<button class="btn btn-success" onclick="guardarEmpresa()">Guardar</button>
+</div>
+<div id="lista-empresas"></div>
+</div>
+</div>
+
+</div>
+</div>
+
+<script>
+const SUPABASE_URL='https://xmafwwyyxpdzajhuaepp.supabase.co';
+const SUPABASE_KEY='sb_publishable_WI0jVKsyiSqbivE6rmRtPQ_UlM43D_m';
+const ADMIN_PASS='admin2026';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let currentWorker=null;
+let currentEmpresa=null;
+
+async function init(){
+const{data}=await sb.from('empresas').select('id,nombre').eq('activa',true);
+const sel=document.getElementById('login-empresa');
+sel.innerHTML='<option value="">Selecciona empresa...</option>';
+if(data)data.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nombre}</option>`});
+}
+
+async function loginWorker(){
+const empresaId=document.getElementById('login-empresa').value;
+const pin=document.getElementById('login-pin').value;
+if(!empresaId||!pin){showMsg('login-msg','Selecciona empresa e introduce PIN','err');return}
+const{data,error}=await sb.from('trabajadores').select('*').eq('empresa_id',empresaId).eq('pin',pin).eq('activo',true).single();
+if(error||!data){showMsg('login-msg','PIN incorrecto','err');return}
+currentWorker=data;currentEmpresa=empresaId;
+document.getElementById('worker-name').textContent=data.nombre+' '+data.apellidos;
+document.getElementById('login-screen').classList.add('hidden');
+document.getElementById('app-worker').style.display='block';
+loadObrasWorker();loadHistorial();
+}
+
+function showAdminLogin(){document.getElementById('login-screen').classList.add('hidden');document.getElementById('admin-login').classList.remove('hidden')}
+function showWorkerLogin(){document.getElementById('admin-login').classList.add('hidden');document.getElementById('login-screen').classList.remove('hidden')}
+
+function loginAdmin(){
+if(document.getElementById('admin-pass').value!==ADMIN_PASS){alert('Contrasena incorrecta');return}
+document.getElementById('admin-login').classList.add('hidden');
+document.getElementById('app-admin').style.display='block';
+loadDashboard();
+}
+
+function logout(){
+currentWorker=null;currentEmpresa=null;
+document.getElementById('app-worker').style.display='none';
+document.getElementById('app-admin').style.display='none';
+document.getElementById('login-screen').classList.remove('hidden');
+document.getElementById('login-pin').value='';
+document.getElementById('admin-pass').value='';
+}
+
+async function loadObrasWorker(){
+const{data}=await sb.from('obras').select('id,nombre').eq('empresa_id',currentEmpresa).eq('activa',true);
+const sel=document.getElementById('parte-obra');
+sel.innerHTML='<option value="">Selecciona obra...</option>';
+if(data)data.forEach(o=>{sel.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
+}
+
+async function guardarParte(){
+const parte={empresa_id:currentEmpresa,obra_id:document.getElementById('parte-obra').value||null,trabajador_id:currentWorker.id,
+fecha:new Date().toISOString().split('T')[0],hora_entrada:document.getElementById('parte-entrada').value||null,
+hora_salida:document.getElementById('parte-salida').value||null,horas_extra:parseFloat(document.getElementById('parte-extras').value)||0,
+descripcion_trabajo:document.getElementById('parte-descripcion').value,materiales:document.getElementById('parte-materiales').value,
+observaciones:document.getElementById('parte-observaciones').value};
+const{error}=await sb.from('partes').insert(parte);
+if(error){showMsg('parte-msg','Error al guardar','err');return}
+showMsg('parte-msg','Parte guardado correctamente','ok');
+document.getElementById('parte-descripcion').value='';document.getElementById('parte-materiales').value='';
+document.getElementById('parte-observaciones').value='';document.getElementById('parte-extras').value='0';
+loadHistorial();
+}
+
+async function loadHistorial(){
+const{data}=await sb.from('partes').select('*,obras(nombre)').eq('trabajador_id',currentWorker.id).order('fecha',{ascending:false}).limit(20);
+const el=document.getElementById('historial-list');
+if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">Sin partes todavia</p>';return}
+el.innerHTML=data.map(p=>`<div class="parte-item"><div><strong>${p.fecha}</strong><br><small>${p.obras?.nombre||'Sin obra'} | ${p.hora_entrada||'--'}  - ${p.hora_salida||'--'}</small><br><small>${p.descripcion_trabajo||''}</small></div><span class="badge ${p.firmado?'badge-green':'badge-yellow'}">${p.firmado?'Firmado':'Pendiente'}</span></div>`).join('');
+}
+
+function showWorkerTab(tab){
+document.querySelectorAll('#app-worker .tabs .tab').forEach((t,i)=>t.classList.toggle('active',i===(tab==='nuevo'?0:1)));
+document.getElementById('worker-nuevo').classList.toggle('hidden',tab!=='nuevo');
+document.getElementById('worker-historial').classList.toggle('hidden',tab!=='historial');
+}
+
+async function loadDashboard(){
+const today=new Date().toISOString().split('T')[0];
+const[p,t,o,e]=await Promise.all([
+sb.from('partes').select('id',{count:'exact'}).eq('fecha',today),
+sb.from('trabajadores').select('id',{count:'exact'}).eq('activo',true),
+sb.from('obras').select('id',{count:'exact'}).eq('activa',true),
+sb.from('empresas').select('id',{count:'exact'}).eq('activa',true)
+]);
+document.getElementById('stat-partes').textContent=p.count||0;
+document.getElementById('stat-trabajadores').textContent=t.count||0;
+document.getElementById('stat-obras').textContent=o.count||0;
+document.getElementById('stat-empresas').textContent=e.count||0;
+const{data}=await sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').order('created_at',{ascending:false}).limit(5);
+const el=document.getElementById('admin-partes-recientes');
+if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin partes recientes</p>';return}
+el.innerHTML=data.map(p=>`<div class="parte-item"><div><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.fecha} | ${p.obras?.nombre||'Sin obra'} | ${p.hora_entrada||'--'} - ${p.hora_salida||'--'}</small></div></div>`).join('');
+loadFiltroEmpresas();
+}
+
+async function loadFiltroEmpresas(){
+const{data}=await sb.from('empresas').select('id,nombre');
+const sel=document.getElementById('filtro-empresa');
+sel.innerHTML='<option value="">Todas</option>';
+if(data)data.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nombre}</option>`});
+}
+
+async function loadAdminPartes(){
+let q=sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').order('fecha',{ascending:false});
+const fecha=document.getElementById('filtro-fecha').value;
+const emp=document.getElementById('filtro-empresa').value;
+if(fecha)q=q.eq('fecha',fecha);
+if(emp)q=q.eq('empresa_id',emp);
+const{data}=await q.limit(100);
+const tbody=document.querySelector('#tabla-partes tbody');
+if(!data||data.length===0){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#999">Sin resultados</td></tr>';return}
+tbody.innerHTML=data.map(p=>`<tr><td>${p.fecha}</td><td>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</td><td>${p.obras?.nombre||'-'}</td><td>${p.hora_entrada||'-'}</td><td>${p.hora_salida||'-'}</td><td>${p.horas_extra}</td><td>${p.descripcion_trabajo||'-'}</td></tr>`).join('');
+}
+
+function exportCSV(){
+const table=document.getElementById('tabla-partes');
+const rows=[...table.querySelectorAll('tr')];
+const csv=rows.map(r=>[...r.querySelectorAll('th,td')].map(c=>'"'+c.textContent.replace(/"/g,'""')+'"').join(',')).join('\n');
+const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='partes_'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+}
+
+function showAdminTab(tab){
+document.querySelectorAll('.admin-nav .tab').forEach(t=>t.classList.remove('active'));
+event.target.classList.add('active');
+['dashboard','partes','trabajadores','obras','empresas'].forEach(t=>document.getElementById('admin-'+t).classList.toggle('hidden',t!==tab));
+if(tab==='partes')loadAdminPartes();
+if(tab==='trabajadores')loadTrabajadores();
+if(tab==='obras')loadObras();
+if(tab==='empresas')loadEmpresas();
+if(tab==='dashboard')loadDashboard();
+}
+
+function showFormTrabajador(){document.getElementById('form-trabajador').classList.toggle('hidden');loadEmpresasSelect('trab-empresa')}
+function showFormObra(){document.getElementById('form-obra').classList.toggle('hidden');loadEmpresasSelect('obra-empresa')}
+function showFormEmpresa(){document.getElementById('form-empresa').classList.toggle('hidden')}
+
+async function loadEmpresasSelect(id){
+const{data}=await sb.from('empresas').select('id,nombre').eq('activa',true);
+const sel=document.getElementById(id);
+sel.innerHTML='<option value="">Selecciona...</option>';
+if(data)data.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nombre}</option>`});
+}
+
+async function guardarTrabajador(){
+const t={nombre:document.getElementById('trab-nombre').value,apellidos:document.getElementById('trab-apellidos').value,
+empresa_id:document.getElementById('trab-empresa').value,dni:document.getElementById('trab-dni').value,pin:document.getElementById('trab-pin').value};
+if(!t.nombre||!t.apellidos||!t.empresa_id){alert('Rellena nombre, apellidos y empresa');return}
+await sb.from('trabajadores').insert(t);
+document.getElementById('form-trabajador').classList.add('hidden');loadTrabajadores();
+}
+
+async function loadTrabajadores(){
+const{data}=await sb.from('trabajadores').select('*,empresas(nombre)').eq('activo',true).order('nombre');
+const el=document.getElementById('lista-trabajadores');
+if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin trabajadores</p>';return}
+el.innerHTML='<table><thead><tr><th>Nombre</th><th>DNI</th><th>Empresa</th><th>PIN</th></tr></thead><tbody>'+
+data.map(t=>`<tr><td>${t.nombre} ${t.apellidos}</td><td>${t.dni||'-'}</td><td>${t.empresas?.nombre||'-'}</td><td>${t.pin||'-'}</td></tr>`).join('')+'</tbody></table>';
+}
+
+async function guardarObra(){
+const o={nombre:document.getElementById('obra-nombre').value,empresa_id:document.getElementById('obra-empresa').value,
+ubicacion:document.getElementById('obra-ubicacion').value,fecha_inicio:document.getElementById('obra-inicio').value||null};
+if(!o.nombre||!o.empresa_id){alert('Rellena nombre y empresa');return}
+await sb.from('obras').insert(o);
+document.getElementById('form-obra').classList.add('hidden');loadObras();
+}
+
+async function loadObras(){
+const{data}=await sb.from('obras').select('*,empresas(nombre)').eq('activa',true).order('nombre');
+const el=document.getElementById('lista-obras');
+if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin obras</p>';return}
+el.innerHTML='<table><thead><tr><th>Obra</th><th>Ubicacion</th><th>Empresa</th><th>Inicio</th></tr></thead><tbody>'+
+data.map(o=>`<tr><td>${o.nombre}</td><td>${o.ubicacion||'-'}</td><td>${o.empresas?.nombre||'-'}</td><td>${o.fecha_inicio||'-'}</td></tr>`).join('')+'</tbody></table>';
+}
+
+async function guardarEmpresa(){
+const e={nombre:document.getElementById('emp-nombre').value,cif:document.getElementById('emp-cif').value,
+telefono:document.getElementById('emp-telefono').value,email:document.getElementById('emp-email').value,direccion:document.getElementById('emp-direccion').value};
+if(!e.nombre){alert('Introduce nombre de empresa');return}
+await sb.from('empresas').insert(e);
+document.getElementById('form-empresa').classList.add('hidden');loadEmpresas();
+}
+
+async function loadEmpresas(){
+const{data}=await sb.from('empresas').select('*').eq('activa',true).order('nombre');
+const el=document.getElementById('lista-empresas');
+if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin empresas</p>';return}
+el.innerHTML='<table><thead><tr><th>Empresa</th><th>CIF</th><th>Telefono</th><th>Email</th></tr></thead><tbody>'+
+data.map(e=>`<tr><td>${e.nombre}</td><td>${e.cif||'-'}</td><td>${e.telefono||'-'}</td><td>${e.email||'-'}</td></tr>`).join('')+'</tbody></table>';
+}
+
+function showMsg(id,msg,type){
+const el=document.getElementById(id);
+el.innerHTML=`<div class="msg msg-${type}">${msg}</div>`;
+setTimeout(()=>el.innerHTML='',3000);
+}
+
+init();
+</script>
+</body>
+</html>

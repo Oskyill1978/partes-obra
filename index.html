@@ -595,18 +595,20 @@ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=
 }
 
 function showEncTab(e,tab){
+      const fullTab=tab.startsWith('enc-')?tab:'enc-'+tab;
       const tabs=['enc-dashboard','enc-partes','enc-fichajes','enc-trabajadores','enc-obras'];
       tabs.forEach(t=>{const el=document.getElementById(t);if(el)el.classList.add('hidden');});
-      const target=document.getElementById(tab);
+      const target=document.getElementById(fullTab);
       if(target)target.classList.remove('hidden');
-      document.querySelectorAll('#app-encargado button').forEach(b=>{
-        if(b.parentElement&&!b.parentElement.id){b.style.background='';b.style.color='';}
-      });
-      if(e&&e.target){e.target.style.background='#7c3aed';e.target.style.color='#fff';}
-      if(tab==='enc-trabajadores')loadEncTrab();
-      if(tab==='enc-partes')loadEncPartes();
-      if(tab==='enc-fichajes')loadEncFichajes();
-      if(tab==='enc-obras')loadEncObras();
+      if(e&&e.target){
+        const parent=e.target.parentElement;
+        if(parent)parent.querySelectorAll('button').forEach(b=>{b.style.background='';b.style.color='';});
+        e.target.style.background='#7c3aed';e.target.style.color='#fff';
+      }
+      if(fullTab==='enc-trabajadores'&&typeof loadEncTrab==='function')loadEncTrab();
+      if(fullTab==='enc-partes'&&typeof loadEncPartes==='function')loadEncPartes();
+      if(fullTab==='enc-fichajes'&&typeof loadEncFichajes==='function')loadEncFichajes();
+      if(fullTab==='enc-obras'&&typeof loadEncObras==='function')loadEncObras();
     }
 
 async function loadEncFichajes(){
@@ -770,20 +772,22 @@ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=
 }
 
 function showAdminTab(e,tab){
+      const fullTab=tab.startsWith('admin-')?tab:'admin-'+tab;
       const tabs=['admin-dashboard','admin-partes','admin-fichajes','admin-trabajadores','admin-obras','admin-empresas','admin-encargados'];
       tabs.forEach(t=>{const el=document.getElementById(t);if(el)el.classList.add('hidden');});
-      const target=document.getElementById(tab);
+      const target=document.getElementById(fullTab);
       if(target)target.classList.remove('hidden');
-      document.querySelectorAll('#app-admin button').forEach(b=>{
-        if(b.parentElement&&!b.parentElement.id){b.style.background='';b.style.color='';}
-      });
-      if(e&&e.target){e.target.style.background='#1d4ed8';e.target.style.color='#fff';}
-      if(tab==='admin-trabajadores')loadTrabajadores();
-      if(tab==='admin-partes')loadPartes();
-      if(tab==='admin-fichajes')loadFichajes();
-      if(tab==='admin-obras')loadObras();
-      if(tab==='admin-empresas')loadEmpresas();
-      if(tab==='admin-encargados')loadEncargados();
+      if(e&&e.target){
+        const parent=e.target.parentElement;
+        if(parent)parent.querySelectorAll('button').forEach(b=>{b.style.background='';b.style.color='';});
+        e.target.style.background='#1d4ed8';e.target.style.color='#fff';
+      }
+      if(fullTab==='admin-trabajadores'&&typeof loadTrabajadores==='function')loadTrabajadores();
+      if(fullTab==='admin-partes'&&typeof loadPartes==='function')loadPartes();
+      if(fullTab==='admin-fichajes'&&typeof loadFichajes==='function')loadFichajes();
+      if(fullTab==='admin-obras'&&typeof loadObras==='function')loadObras();
+      if(fullTab==='admin-empresas'&&typeof loadEmpresas==='function')loadEmpresas();
+      if(fullTab==='admin-encargados'&&typeof loadEncargados==='function')loadEncargados();
     }
 
 function showFormTrabajador(){document.getElementById('form-trabajador').classList.toggle('hidden');loadEmpresasSelect('trab-empresa')}

@@ -215,7 +215,8 @@ th{background:#f9fafb;font-weight:600}
 <div class="card">
 <h3 class="enc-header">Partes de mi Empresa</h3>
 <div class="row" style="margin-bottom:12px">
-<div><label>Filtrar por fecha</label><input type="date" id="enc-filtro-fecha" onchange="loadEncPartes()"></div>
+<div><label>Desde</label><input type="date" id="enc-filtro-fecha-desde" onchange="loadEncPartes()"></div>
+<div><label>Hasta</label><input type="date" id="enc-filtro-fecha-hasta" onchange="loadEncPartes()"></div>
 <div><label>Filtrar por obra</label><select id="enc-filtro-obra" onchange="loadEncPartes()"><option value="">Todas</option></select></div>
 </div>
 <button class="btn btn-encargado" style="margin-bottom:12px" onclick="encExportCSV()">Exportar CSV</button>
@@ -296,7 +297,8 @@ th{background:#f9fafb;font-weight:600}
 <div class="card">
 <h3>Todos los Partes</h3>
 <div class="row" style="margin-bottom:12px">
-<div><label>Filtrar por fecha</label><input type="date" id="filtro-fecha" onchange="loadAdminPartes()"></div>
+<div><label>Desde</label><input type="date" id="filtro-fecha-desde" onchange="loadAdminPartes()"></div>
+<div><label>Hasta</label><input type="date" id="filtro-fecha-hasta" onchange="loadAdminPartes()"></div>
 <div><label>Filtrar por empresa</label><select id="filtro-empresa" onchange="loadAdminPartes()"><option value="">Todas</option></select></div>
 </div>
 <button class="btn btn-primary" style="margin-bottom:12px" onclick="exportCSV()">Exportar CSV</button>
@@ -578,14 +580,15 @@ if(data)data.forEach(o=>{sel.innerHTML+=`<option value="${o.id}">${o.nombre}</op
 }
 
 async function loadEncPartes(){
-let q=sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').eq('empresa_id',encEmpresaId).order('fecha',{ascending:false});
-const fecha=document.getElementById('enc-filtro-fecha').value;
-const obra=document.getElementById('enc-filtro-obra').value;
-if(fecha)q=q.eq('fecha',fecha);if(obra)q=q.eq('obra_id',obra);
-const{data}=await q.limit(100);
-const tbody=document.querySelector('#enc-tabla-partes tbody');
-if(!data||data.length===0){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#999">Sin resultados</td></tr>';return}
-tbody.innerHTML=data.map(p=>`<tr><td>${p.fecha}</td><td>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</td><td>${p.obras?.nombre||'-'}</td><td>${p.hora_entrada||'-'}</td><td>${p.hora_salida||'-'}</td><td>${p.horas_extra}</td><td>${p.descripcion_trabajo||'-'}</td></tr>`).join('');
+  let q=sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').eq('empresa_id',encEmpresaId).order('fecha',{ascending:false});
+  const desde=document.getElementById('enc-filtro-fecha-desde').value;
+  const hasta=document.getElementById('enc-filtro-fecha-hasta').value;
+  const obra=document.getElementById('enc-filtro-obra').value;
+  if(desde) q=q.gte('fecha',desde);
+  if(hasta) q=q.lte('fecha',hasta);
+  if(obra) q=q.eq('obra_id',obra);
+  const{data}=await q.limit(500);
+  document.querySelector('#enc-tabla-partes tbody').innerHTML=(data||[]).map(p=>`<tr><td>${p.fecha}</td><td>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</td><td>${p.obras?.nombre||'-'}</td><td>${p.hora_entrada||'-'}</td><td>${p.hora_salida||'-'}</td><td>${p.horas_extra}</td><td>${p.descripcion_trabajo||'-'}</td></tr>`).join('');
 }
 
 function encExportCSV(){
@@ -758,13 +761,15 @@ if(data)data.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nombre}</op
 }
 
 async function loadAdminPartes(){
-let q=sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').order('fecha',{ascending:false});
-const fecha=document.getElementById('filtro-fecha').value;const emp=document.getElementById('filtro-empresa').value;
-if(fecha)q=q.eq('fecha',fecha);if(emp)q=q.eq('empresa_id',emp);
-const{data}=await q.limit(100);
-const tbody=document.querySelector('#tabla-partes tbody');
-if(!data||data.length===0){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#999">Sin resultados</td></tr>';return}
-tbody.innerHTML=data.map(p=>`<tr><td>${p.fecha}</td><td>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</td><td>${p.obras?.nombre||'-'}</td><td>${p.hora_entrada||'-'}</td><td>${p.hora_salida||'-'}</td><td>${p.horas_extra}</td><td>${p.descripcion_trabajo||'-'}</td></tr>`).join('');
+  let q=sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').order('fecha',{ascending:false});
+  const desde=document.getElementById('filtro-fecha-desde').value;
+  const hasta=document.getElementById('filtro-fecha-hasta').value;
+  const emp=document.getElementById('filtro-empresa').value;
+  if(desde) q=q.gte('fecha',desde);
+  if(hasta) q=q.lte('fecha',hasta);
+  if(emp) q=q.eq('empresa_id',emp);
+  const{data}=await q.limit(500);
+  document.querySelector('#tabla-partes tbody').innerHTML=(data||[]).map(p=>`<tr><td>${p.fecha}</td><td>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</td><td>${p.obras?.nombre||'-'}</td><td>${p.hora_entrada||'-'}</td><td>${p.hora_salida||'-'}</td><td>${p.horas_extra}</td><td>${p.descripcion_trabajo||'-'}</td></tr>`).join('');
 }
 
 function exportCSV(){

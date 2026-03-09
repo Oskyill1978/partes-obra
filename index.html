@@ -84,8 +84,7 @@ th{background:#f9fafb;font-weight:600}
 <!-- LOGIN SCREEN -->
 <div id="login-screen" class="login-screen">
 <h2>Acceso Trabajador</h2>
-<label>Empresa</label>
-<select id="login-empresa" style="max-width:300px;margin-bottom:16px"><option value="">Selecciona empresa...</option></select>
+<select id="login-empresa" class="hidden"></select>
 <label>PIN de acceso</label>
 <input type="password" id="login-pin" maxlength="4" placeholder="****">
 <br>
@@ -100,8 +99,7 @@ th{background:#f9fafb;font-weight:600}
 <!-- ENCARGADO LOGIN -->
 <div id="encargado-login" class="login-screen hidden">
 <h2 class="enc-header">Acceso Encargado</h2>
-<label>Empresa</label>
-<select id="enc-login-empresa" style="max-width:300px;margin-bottom:16px"><option value="">Selecciona empresa...</option></select>
+<select id="enc-login-empresa" class="hidden"></select>
 <label>PIN de encargado</label>
 <input type="password" id="enc-login-pin" maxlength="6" placeholder="******" style="letter-spacing:6px">
 <br>
@@ -401,16 +399,18 @@ if(data)data.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nombre}</op
 }
 
 async function loginWorker(){
-const empresaId=document.getElementById('login-empresa').value;
-const pin=document.getElementById('login-pin').value;
-if(!empresaId||!pin){showMsg('login-msg','Selecciona empresa e introduce PIN','err');return}
-const{data,error}=await sb.from('trabajadores').select('*').eq('empresa_id',empresaId).eq('pin',pin).eq('activo',true).single();
-if(error||!data){showMsg('login-msg','PIN incorrecto','err');return}
-currentWorker=data;currentEmpresa=empresaId;
-document.getElementById('worker-name').textContent=data.nombre+' '+data.apellidos;
-document.getElementById('login-screen').classList.add('hidden');
-document.getElementById('app-worker').style.display='block';
-loadObrasWorker();loadHistorial();checkOpenFichaje();
+  const pin=document.getElementById('login-pin').value;
+  if(!pin){showMsg('login-msg','Introduce tu PIN','err');return;}
+  const{data,error}=await sb.from('trabajadores').select('*').eq('pin',pin).eq('activo',true);
+  if(error||!data||data.length===0){showMsg('login-msg','PIN incorrecto','err');return;}
+  if(data.length>1){showMsg('login-msg','PIN duplicado, contacta con el admin','err');return;}
+  const worker=data[0];
+  currentWorker=worker;
+  currentEmpresa=worker.empresa_id;
+  document.getElementById('worker-name').textContent=worker.nombre+' '+worker.apellidos;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-worker').style.display='block';
+  loadObrasWorker();loadHistorial();checkOpenFichaje();
 }
 
 async function checkOpenFichaje(){
@@ -437,19 +437,20 @@ function showEncargadoLogin(){hideAllScreens();document.getElementById('encargad
 function hideAllScreens(){['login-screen','admin-login','encargado-login'].forEach(id=>document.getElementById(id).classList.add('hidden'))}
 
 async function loginEncargado(){
-const empresaId=document.getElementById('enc-login-empresa').value;
-const pin=document.getElementById('enc-login-pin').value;
-if(!empresaId||!pin){showMsg('enc-login-msg','Selecciona empresa e introduce PIN','err');return}
-const{data,error}=await sb.from('encargados').select('*').eq('empresa_id',empresaId).eq('pin',pin).eq('activo',true).single();
-if(error||!data){showMsg('enc-login-msg','PIN incorrecto','err');return}
-currentEncargado=data;encEmpresaId=empresaId;
-const{data:emp}=await sb.from('empresas').select('nombre').eq('id',empresaId).single();
-document.getElementById('enc-name').textContent=data.nombre+' '+data.apellidos+' - '+(emp?.nombre||'');
-document.getElementById('encargado-login').classList.add('hidden');
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('login-screen').classList.add('hidden');
-document.getElementById('app-encargado').style.display='block';
-loadEncDashboard();
+  const pin=document.getElementById('enc-login-pin').value;
+  if(!pin){showMsg('enc-login-msg','Introduce tu PIN','err');return;}
+  const{data,error}=await sb.from('encargados').select('*').eq('pin',pin).eq('activo',true);
+  if(error||!data||data.length===0){showMsg('enc-login-msg','PIN incorrecto','err');return;}
+  if(data.length>1){showMsg('enc-login-msg','PIN duplicado, contacta con el admin','err');return;}
+  const enc=data[0];
+  currentEncargado=enc;
+  encEmpresaId=enc.empresa_id;
+  const{data:emp}=await sb.from('empresas').select('nombre').eq('id',encEmpresaId).single();
+  document.getElementById('enc-name').textContent=enc.nombre+' '+enc.apellidos+' - '+(emp?.nombre||'');
+  document.getElementById('encargado-login').classList.add('hidden');
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-encargado').style.display='block';
+  loadEncDashboard();
 }
 
 function loginAdmin(){

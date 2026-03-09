@@ -6,7 +6,6 @@
 <title>Partes de Obra</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#333}
@@ -26,7 +25,7 @@ textarea{min-height:80px;resize:vertical}
 .btn-primary:hover{background:#1544b8}
 .btn-success{background:#059669;color:#fff}
 .btn-danger{background:#dc2626;color:#fff;padding:8px 12px;width:auto;font-size:.85rem}
-      .btn-sm{padding:4px 8px;font-size:12px}
+.btn-sm{padding:4px 8px;font-size:12px}
 .btn-encargado{background:#7c3aed;color:#fff}
 .btn-encargado:hover{background:#6d28d9}
 .btn-warning{background:#f59e0b;color:#fff}
@@ -76,6 +75,27 @@ th{background:#f9fafb;font-weight:600}
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center}
 .modal{background:#fff;border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto}
 .modal h3{margin-bottom:16px;color:#1a56db}
+.doc-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;transition:.2s}
+.doc-card:hover{border-color:#1a56db;box-shadow:0 2px 8px rgba(26,86,219,.15)}
+.doc-card .doc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.doc-card .doc-tipo{font-weight:600;text-transform:capitalize}
+.doc-card .doc-total{font-weight:700;color:#059669;font-size:1.1rem}
+.doc-card .doc-info{font-size:.85rem;color:#666}
+.badge-factura{background:#dbeafe;color:#1e40af}
+.badge-albaran{background:#fef3c7;color:#92400e}
+.badge-presupuesto{background:#ede9fe;color:#5b21b6}
+.img-preview{max-width:100%;max-height:200px;border-radius:8px;margin:8px 0;border:1px solid #ddd}
+.partida-row{display:flex;gap:8px;align-items:center;padding:8px;border-bottom:1px solid #f0f0f0}
+.partida-row input{margin-bottom:0;font-size:.85rem;padding:6px}
+.partida-row .partida-desc{flex:3}
+.partida-row .partida-cant{flex:1}
+.partida-row .partida-precio{flex:1}
+.partida-row .partida-total{flex:1;font-weight:600;text-align:right;font-size:.85rem}
+.partida-row .partida-del{flex:0;padding:4px 8px}
+.capture-options{display:flex;gap:8px;margin-bottom:12px}
+.capture-options label{display:flex;align-items:center;justify-content:center;flex:1;padding:12px;border:2px dashed #ddd;border-radius:8px;cursor:pointer;text-align:center;font-size:.85rem;transition:.2s}
+.capture-options label:hover{border-color:#1a56db;background:#f0f4ff}
+.capture-options input[type=file]{display:none}
 </style>
 </head>
 <body>
@@ -95,7 +115,6 @@ th{background:#f9fafb;font-weight:600}
 <button class="btn" style="max-width:300px;background:#e5e7eb" onclick="showAdminLogin()">Acceso Admin</button>
 <div id="login-msg"></div>
 </div>
-
 <!-- ENCARGADO LOGIN -->
 <div id="encargado-login" class="login-screen hidden">
 <h2 class="enc-header">Acceso Encargado</h2>
@@ -108,7 +127,6 @@ th{background:#f9fafb;font-weight:600}
 <button class="btn" style="max-width:300px;background:#e5e7eb" onclick="showWorkerLogin()">Volver</button>
 <div id="enc-login-msg"></div>
 </div>
-
 <!-- ADMIN LOGIN -->
 <div id="admin-login" class="login-screen hidden">
 <h2>Panel Admin</h2>
@@ -119,7 +137,6 @@ th{background:#f9fafb;font-weight:600}
 <br>
 <button class="btn" style="max-width:300px;background:#e5e7eb" onclick="showWorkerLogin()">Volver</button>
 </div>
-
 <!-- QR SCANNER MODAL -->
 <div id="qr-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeQrScanner()">
 <div class="modal">
@@ -130,7 +147,6 @@ th{background:#f9fafb;font-weight:600}
 <button class="btn" style="background:#e5e7eb;margin-top:12px" onclick="closeQrScanner()">Cerrar</button>
 </div>
 </div>
-
 <!-- QR VIEW MODAL -->
 <div id="qr-view-modal" class="modal-overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
 <div class="modal" style="text-align:center">
@@ -142,7 +158,14 @@ th{background:#f9fafb;font-weight:600}
 <button class="btn" style="background:#e5e7eb;margin-top:8px;width:auto;padding:8px 24px" onclick="document.getElementById('qr-view-modal').classList.add('hidden')">Cerrar</button>
 </div>
 </div>
-
+<!-- DOCUMENT VIEW MODAL -->
+<div id="doc-view-modal" class="modal-overlay hidden" onclick="if(event.target===this)this.classList.add('hidden')">
+<div class="modal" style="max-width:600px">
+<h3 id="doc-view-title">Detalle Documento</h3>
+<div id="doc-view-content"></div>
+<button class="btn" style="background:#e5e7eb;margin-top:12px" onclick="document.getElementById('doc-view-modal').classList.add('hidden')">Cerrar</button>
+</div>
+</div>
 <!-- WORKER APP -->
 <div id="app-worker">
 <div class="top-bar">
@@ -153,6 +176,7 @@ th{background:#f9fafb;font-weight:600}
 <div class="tabs">
 <button class="tab active" onclick="showWorkerTab('nuevo')">Nuevo Parte</button>
 <button class="tab" onclick="showWorkerTab('historial')">Mis Partes</button>
+<button class="tab" onclick="showWorkerTab('documentos')">Documentos</button>
 <button class="tab" onclick="showWorkerTab('qr')">Escanear QR</button>
 </div>
 <div id="worker-nuevo">
@@ -179,6 +203,55 @@ th{background:#f9fafb;font-weight:600}
 <div id="worker-historial" class="hidden">
 <div class="card"><h3>Mis Partes</h3><div id="historial-list"></div></div>
 </div>
+<div id="worker-documentos" class="hidden">
+<div class="card">
+<h3>Registrar Documento de Compra</h3>
+<label>Tipo de documento</label>
+<select id="doc-tipo">
+<option value="factura">Factura</option>
+<option value="albaran">Albaran</option>
+<option value="presupuesto">Presupuesto</option>
+</select>
+<label>Proveedor</label>
+<input id="doc-proveedor" placeholder="Nombre del proveedor">
+<div class="row">
+<div><label>N. Documento</label><input id="doc-numero" placeholder="Ej: F-2026-001"></div>
+<div><label>Fecha emision</label><input type="date" id="doc-fecha"></div>
+</div>
+<label>Obra (opcional)</label>
+<select id="doc-obra"><option value="">Sin asignar</option></select>
+<label>Foto del documento</label>
+<div class="capture-options">
+<label>
+<input type="file" id="doc-foto-camara" accept="image/*" capture="environment" onchange="previewDocFoto(this)">
+📷 Hacer foto
+</label>
+<label>
+<input type="file" id="doc-foto-galeria" accept="image/*" onchange="previewDocFoto(this)">
+🖼 Galeria
+</label>
+</div>
+<div id="doc-foto-preview"></div>
+<label>Observaciones</label>
+<textarea id="doc-observaciones" placeholder="Notas sobre el documento..." style="min-height:50px"></textarea>
+<h4 style="margin:12px 0 8px;color:#1a56db">Partidas</h4>
+<div id="doc-partidas-list"></div>
+<button class="btn" style="background:#e5e7eb;margin-bottom:12px" onclick="addPartidaRow()">+ Anadir partida</button>
+<div style="text-align:right;font-size:1.1rem;font-weight:700;margin-bottom:12px;color:#059669">
+Total: <span id="doc-total-display">0.00</span> EUR
+</div>
+<button class="btn btn-success" onclick="guardarDocumento()">Guardar Documento</button>
+<div id="doc-msg"></div>
+</div>
+<div class="card">
+<h3>Mis Documentos</h3>
+<div class="row" style="margin-bottom:12px">
+<div><label>Tipo</label><select id="w-doc-filtro-tipo" onchange="loadWorkerDocs()"><option value="">Todos</option><option value="factura">Factura</option><option value="albaran">Albaran</option><option value="presupuesto">Presupuesto</option></select></div>
+<div><label>Obra</label><select id="w-doc-filtro-obra" onchange="loadWorkerDocs()"><option value="">Todas</option></select></div>
+</div>
+<div id="worker-docs-list"></div>
+</div>
+</div>
 <div id="worker-qr" class="hidden">
 <div class="card">
 <h3>Fichaje por QR</h3>
@@ -187,7 +260,6 @@ th{background:#f9fafb;font-weight:600}
 </div>
 </div>
 </div>
-
 <!-- ENCARGADO APP -->
 <div id="app-encargado">
 <div class="top-bar">
@@ -198,6 +270,7 @@ th{background:#f9fafb;font-weight:600}
 <button class="tab active" onclick="showEncTab(event,'dashboard')">Dashboard</button>
 <button class="tab" onclick="showEncTab(event,'partes')">Partes</button>
 <button class="tab" onclick="showEncTab(event,'fichajes')">Fichajes</button>
+<button class="tab" onclick="showEncTab(event,'documentos')">Documentos</button>
 <button class="tab" onclick="showEncTab(event,'trabajadores')">Trabajadores</button>
 <button class="tab" onclick="showEncTab(event,'obras')">Obras</button>
 </div>
@@ -240,6 +313,17 @@ th{background:#f9fafb;font-weight:600}
 <div id="enc-fichar-msg"></div>
 </div>
 </div>
+<div id="enc-documentos" class="hidden">
+<div class="card">
+<h3 class="enc-header">Documentos de mi Empresa</h3>
+<div class="row" style="margin-bottom:12px">
+<div><label>Tipo</label><select id="enc-doc-filtro-tipo" onchange="loadEncDocs()"><option value="">Todos</option><option value="factura">Factura</option><option value="albaran">Albaran</option><option value="presupuesto">Presupuesto</option></select></div>
+<div><label>Obra</label><select id="enc-doc-filtro-obra" onchange="loadEncDocs()"><option value="">Todas</option></select></div>
+</div>
+<button class="btn btn-encargado" style="margin-bottom:12px" onclick="exportDocsCSV('enc')">Exportar CSV</button>
+<div id="enc-docs-list"></div>
+</div>
+</div>
 <div id="enc-trabajadores" class="hidden">
 <div class="card">
 <h3 class="enc-header">Trabajadores de mi Empresa</h3>
@@ -266,7 +350,6 @@ th{background:#f9fafb;font-weight:600}
 </div>
 </div>
 </div>
-
 <!-- ADMIN APP -->
 <div id="app-admin">
 <div class="top-bar">
@@ -277,6 +360,7 @@ th{background:#f9fafb;font-weight:600}
 <button class="tab active" onclick="showAdminTab(event,'dashboard')">Dashboard</button>
 <button class="tab" onclick="showAdminTab(event,'partes')">Partes</button>
 <button class="tab" onclick="showAdminTab(event,'fichajes')">Fichajes</button>
+<button class="tab" onclick="showAdminTab(event,'documentos')">Documentos</button>
 <button class="tab" onclick="showAdminTab(event,'trabajadores')">Trabajadores</button>
 <button class="tab" onclick="showAdminTab(event,'obras')">Obras</button>
 <button class="tab" onclick="showAdminTab(event,'empresas')">Empresas</button>
@@ -322,6 +406,18 @@ th{background:#f9fafb;font-weight:600}
 <button class="btn btn-danger" style="width:100%" onclick="cerrarFichajePorTrabajador('admin')">Cerrar Fichaje</button>
 </div>
 <div id="admin-fichar-msg"></div>
+</div>
+</div>
+<div id="admin-documentos" class="hidden">
+<div class="card">
+<h3>Documentos de Compra</h3>
+<div class="row" style="margin-bottom:12px">
+<div><label>Empresa</label><select id="admin-doc-filtro-empresa" onchange="loadAdminDocs()"><option value="">Todas</option></select></div>
+<div><label>Tipo</label><select id="admin-doc-filtro-tipo" onchange="loadAdminDocs()"><option value="">Todos</option><option value="factura">Factura</option><option value="albaran">Albaran</option><option value="presupuesto">Presupuesto</option></select></div>
+<div><label>Obra</label><select id="admin-doc-filtro-obra" onchange="loadAdminDocs()"><option value="">Todas</option></select></div>
+</div>
+<button class="btn btn-primary" style="margin-bottom:12px" onclick="exportDocsCSV('admin')">Exportar CSV</button>
+<div id="admin-docs-list"></div>
 </div>
 </div>
 <div id="admin-trabajadores" class="hidden">
@@ -380,14 +476,13 @@ th{background:#f9fafb;font-weight:600}
 </div>
 </div>
 </div>
-
 </div>
 <script>
 const SUPABASE_URL='https://xmafwwyyxpdzajhuaepp.supabase.co';
 const SUPABASE_KEY='sb_publishable_SgTb-fcdlLr3fwKDsw2jKw_21l_DNZq';
 const ADMIN_PASS='admin2026';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let currentWorker=null;let currentEmpresa=null;let currentEncargado=null;let encEmpresaId=null;let qrScanner=null;
+let currentWorker=null;let currentEmpresa=null;let currentEncargado=null;let encEmpresaId=null;let qrScanner=null;let docFotoFile=null;let partidaCounter=0;
 
 async function init(){
 const{data}=await sb.from('empresas').select('id,nombre').eq('activa',true);
@@ -399,18 +494,18 @@ if(data)data.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nombre}</op
 }
 
 async function loginWorker(){
-  const pin=document.getElementById('login-pin').value;
-  if(!pin){showMsg('login-msg','Introduce tu PIN','err');return;}
-  const{data,error}=await sb.from('trabajadores').select('*').eq('pin',pin).eq('activo',true);
-  if(error||!data||data.length===0){showMsg('login-msg','PIN incorrecto','err');return;}
-  if(data.length>1){showMsg('login-msg','PIN duplicado, contacta con el admin','err');return;}
-  const worker=data[0];
-  currentWorker=worker;
-  currentEmpresa=worker.empresa_id;
-  document.getElementById('worker-name').textContent=worker.nombre+' '+worker.apellidos;
-  document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('app-worker').style.display='block';
-  loadObrasWorker();loadHistorial();checkOpenFichaje();
+const pin=document.getElementById('login-pin').value;
+if(!pin){showMsg('login-msg','Introduce tu PIN','err');return;}
+const{data,error}=await sb.from('trabajadores').select('*').eq('pin',pin).eq('activo',true);
+if(error||!data||data.length===0){showMsg('login-msg','PIN incorrecto','err');return;}
+if(data.length>1){showMsg('login-msg','PIN duplicado, contacta con el admin','err');return;}
+const worker=data[0];
+currentWorker=worker;
+currentEmpresa=worker.empresa_id;
+document.getElementById('worker-name').textContent=worker.nombre+' '+worker.apellidos;
+document.getElementById('login-screen').classList.add('hidden');
+document.getElementById('app-worker').style.display='block';
+loadObrasWorker();loadHistorial();checkOpenFichaje();loadWorkerDocs();
 }
 
 async function checkOpenFichaje(){
@@ -437,20 +532,20 @@ function showEncargadoLogin(){hideAllScreens();document.getElementById('encargad
 function hideAllScreens(){['login-screen','admin-login','encargado-login'].forEach(id=>document.getElementById(id).classList.add('hidden'))}
 
 async function loginEncargado(){
-  const pin=document.getElementById('enc-login-pin').value;
-  if(!pin){showMsg('enc-login-msg','Introduce tu PIN','err');return;}
-  const{data,error}=await sb.from('encargados').select('*').eq('pin',pin).eq('activo',true);
-  if(error||!data||data.length===0){showMsg('enc-login-msg','PIN incorrecto','err');return;}
-  if(data.length>1){showMsg('enc-login-msg','PIN duplicado, contacta con el admin','err');return;}
-  const enc=data[0];
-  currentEncargado=enc;
-  encEmpresaId=enc.empresa_id;
-  const{data:emp}=await sb.from('empresas').select('nombre').eq('id',encEmpresaId).single();
-  document.getElementById('enc-name').textContent=enc.nombre+' '+enc.apellidos+' - '+(emp?.nombre||'');
-  document.getElementById('encargado-login').classList.add('hidden');
-  document.getElementById('login-screen').classList.add('hidden');
-  document.getElementById('app-encargado').style.display='block';
-  loadEncDashboard();
+const pin=document.getElementById('enc-login-pin').value;
+if(!pin){showMsg('enc-login-msg','Introduce tu PIN','err');return;}
+const{data,error}=await sb.from('encargados').select('*').eq('pin',pin).eq('activo',true);
+if(error||!data||data.length===0){showMsg('enc-login-msg','PIN incorrecto','err');return;}
+if(data.length>1){showMsg('enc-login-msg','PIN duplicado, contacta con el admin','err');return;}
+const enc=data[0];
+currentEncargado=enc;
+encEmpresaId=enc.empresa_id;
+const{data:emp}=await sb.from('empresas').select('nombre').eq('id',encEmpresaId).single();
+document.getElementById('enc-name').textContent=enc.nombre+' '+enc.apellidos+' - '+(emp?.nombre||'');
+document.getElementById('encargado-login').classList.add('hidden');
+document.getElementById('login-screen').classList.add('hidden');
+document.getElementById('app-encargado').style.display='block';
+loadEncDashboard();
 }
 
 function loginAdmin(){
@@ -462,7 +557,7 @@ loadDashboard();
 }
 
 function logout(){
-currentWorker=null;currentEmpresa=null;currentEncargado=null;encEmpresaId=null;
+currentWorker=null;currentEmpresa=null;currentEncargado=null;encEmpresaId=null;docFotoFile=null;
 ['app-worker','app-admin','app-encargado'].forEach(id=>document.getElementById(id).style.display='none');
 document.getElementById('login-screen').classList.remove('hidden');
 ['login-pin','admin-pass','enc-login-pin'].forEach(id=>document.getElementById(id).value='');
@@ -478,12 +573,10 @@ qrScanner.start({facingMode:'environment'},{fps:10,qrbox:250},onQrSuccess,()=>{}
 document.getElementById('qr-result').innerHTML='<div class="msg msg-err">Error al abrir camara: '+err+'</div>';
 });
 }
-
 function closeQrScanner(){
 if(qrScanner){qrScanner.stop().catch(()=>{});qrScanner=null;}
 document.getElementById('qr-modal').classList.add('hidden');
 }
-
 async function onQrSuccess(code){
 closeQrScanner();
 const{data:obra}=await sb.from('obras').select('*').eq('codigo_qr',code).single();
@@ -500,7 +593,6 @@ alert('Entrada registrada en '+obra.nombre+' a las '+hora);
 }
 checkOpenFichaje();loadHistorial();
 }
-
 function showQrCode(obraName,codigoQr){
 document.getElementById('qr-view-obra-name').textContent=obraName;
 document.getElementById('qr-view-code').textContent='Codigo: '+codigoQr;
@@ -510,7 +602,6 @@ img.onload=function(){canvas.width=250;canvas.height=250;canvas.getContext('2d')
 img.src='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='+encodeURIComponent(codigoQr);
 document.getElementById('qr-view-modal').classList.remove('hidden');
 }
-
 function printQR(){
 const canvas=document.getElementById('qr-canvas');
 const name=document.getElementById('qr-view-obra-name').textContent;
@@ -526,6 +617,13 @@ const{data}=await sb.from('obras').select('id,nombre').eq('empresa_id',currentEm
 const sel=document.getElementById('parte-obra');
 sel.innerHTML='<option value="">Selecciona obra...</option>';
 if(data)data.forEach(o=>{sel.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
+// Also load for doc form
+const docSel=document.getElementById('doc-obra');
+docSel.innerHTML='<option value="">Sin asignar</option>';
+if(data)data.forEach(o=>{docSel.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
+const wDocSel=document.getElementById('w-doc-filtro-obra');
+wDocSel.innerHTML='<option value="">Todas</option>';
+if(data)data.forEach(o=>{wDocSel.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
 }
 
 async function guardarParte(){
@@ -550,9 +648,169 @@ el.innerHTML=data.map(p=>`<div class="parte-item"><div><strong>${p.fecha}</stron
 }
 
 function showWorkerTab(tab){
-const tabs=['nuevo','historial','qr'];
+const tabs=['nuevo','historial','documentos','qr'];
 document.querySelectorAll('#app-worker .tabs .tab').forEach((t,i)=>t.classList.toggle('active',tabs[i]===tab));
 tabs.forEach(t=>document.getElementById('worker-'+t).classList.toggle('hidden',t!==tab));
+if(tab==='documentos'){loadWorkerDocs();}
+}
+
+// === DOCUMENT FUNCTIONS ===
+function previewDocFoto(input){
+if(input.files&&input.files[0]){
+docFotoFile=input.files[0];
+const reader=new FileReader();
+reader.onload=function(e){
+document.getElementById('doc-foto-preview').innerHTML='<img src="'+e.target.result+'" class="img-preview">';
+};
+reader.readAsDataURL(docFotoFile);
+}
+}
+
+function addPartidaRow(){
+partidaCounter++;
+const container=document.getElementById('doc-partidas-list');
+const row=document.createElement('div');
+row.className='partida-row';
+row.id='partida-'+partidaCounter;
+row.innerHTML=`
+<input class="partida-desc" placeholder="Descripcion" data-field="desc">
+<input class="partida-cant" type="number" value="1" min="0" step="0.01" data-field="cant" oninput="calcPartida(this)">
+<input class="partida-precio" type="number" value="0" min="0" step="0.01" data-field="precio" oninput="calcPartida(this)">
+<span class="partida-total" data-field="total">0.00</span>
+<button class="btn-danger partida-del" onclick="removePartida('${partidaCounter}')">X</button>
+`;
+container.appendChild(row);
+}
+
+function removePartida(id){
+const row=document.getElementById('partida-'+id);
+if(row)row.remove();
+calcDocTotal();
+}
+
+function calcPartida(el){
+const row=el.closest('.partida-row');
+const cant=parseFloat(row.querySelector('[data-field=cant]').value)||0;
+const precio=parseFloat(row.querySelector('[data-field=precio]').value)||0;
+const total=cant*precio;
+row.querySelector('[data-field=total]').textContent=total.toFixed(2);
+calcDocTotal();
+}
+
+function calcDocTotal(){
+let total=0;
+document.querySelectorAll('#doc-partidas-list .partida-row').forEach(row=>{
+total+=parseFloat(row.querySelector('[data-field=total]').textContent)||0;
+});
+document.getElementById('doc-total-display').textContent=total.toFixed(2);
+}
+
+async function guardarDocumento(){
+const tipo=document.getElementById('doc-tipo').value;
+const proveedor=document.getElementById('doc-proveedor').value;
+const numero=document.getElementById('doc-numero').value;
+const fecha=document.getElementById('doc-fecha').value;
+const obraId=document.getElementById('doc-obra').value||null;
+const obs=document.getElementById('doc-observaciones').value;
+if(!proveedor){showMsg('doc-msg','Introduce el proveedor','err');return}
+let imagenUrl=null;
+if(docFotoFile){
+const ext=docFotoFile.name.split('.').pop();
+const fileName=Date.now()+'_'+Math.random().toString(36).substr(2,9)+'.'+ext;
+const{data:uploadData,error:uploadErr}=await sb.storage.from('documentos').upload(fileName,docFotoFile);
+if(uploadErr){showMsg('doc-msg','Error al subir imagen: '+uploadErr.message,'err');return}
+const{data:urlData}=sb.storage.from('documentos').getPublicUrl(fileName);
+imagenUrl=urlData.publicUrl;
+}
+const totalDoc=parseFloat(document.getElementById('doc-total-display').textContent)||0;
+const doc={empresa_id:currentEmpresa,obra_id:obraId,trabajador_id:currentWorker.id,tipo_documento:tipo,
+numero_documento:numero,proveedor:proveedor,fecha_emision:fecha||null,observaciones:obs,imagen_url:imagenUrl,total:totalDoc};
+const{data:inserted,error}=await sb.from('documentos_compra').insert(doc).select().single();
+if(error){showMsg('doc-msg','Error al guardar: '+error.message,'err');return}
+// Save partidas
+const partidas=[];
+document.querySelectorAll('#doc-partidas-list .partida-row').forEach(row=>{
+const desc=row.querySelector('[data-field=desc]').value;
+const cant=parseFloat(row.querySelector('[data-field=cant]').value)||0;
+const precio=parseFloat(row.querySelector('[data-field=precio]').value)||0;
+const total=cant*precio;
+if(desc){partidas.push({documento_id:inserted.id,descripcion:desc,cantidad:cant,precio_unitario:precio,total_partida:total})}
+});
+if(partidas.length>0){await sb.from('partidas_documento').insert(partidas)}
+showMsg('doc-msg','Documento guardado correctamente','ok');
+resetDocForm();
+loadWorkerDocs();
+}
+
+function resetDocForm(){
+document.getElementById('doc-proveedor').value='';
+document.getElementById('doc-numero').value='';
+document.getElementById('doc-fecha').value='';
+document.getElementById('doc-observaciones').value='';
+document.getElementById('doc-foto-preview').innerHTML='';
+document.getElementById('doc-partidas-list').innerHTML='';
+document.getElementById('doc-total-display').textContent='0.00';
+docFotoFile=null;partidaCounter=0;
+}
+
+async function loadWorkerDocs(){
+if(!currentWorker)return;
+let q=sb.from('documentos_compra').select('*,obras(nombre)').eq('trabajador_id',currentWorker.id).order('created_at',{ascending:false});
+const tipo=document.getElementById('w-doc-filtro-tipo')?.value;
+const obra=document.getElementById('w-doc-filtro-obra')?.value;
+if(tipo)q=q.eq('tipo_documento',tipo);
+if(obra)q=q.eq('obra_id',obra);
+const{data}=await q.limit(50);
+const el=document.getElementById('worker-docs-list');
+if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">Sin documentos</p>';return}
+el.innerHTML=data.map(d=>renderDocCard(d)).join('');
+}
+
+function renderDocCard(d){
+const badgeClass={'factura':'badge-factura','albaran':'badge-albaran','presupuesto':'badge-presupuesto'}[d.tipo_documento]||'';
+return `<div class="doc-card" onclick="viewDocument('${d.id}')">
+<div class="doc-header">
+<span><span class="badge ${badgeClass}">${d.tipo_documento}</span> ${d.numero_documento||''}</span>
+<span class="doc-total">${parseFloat(d.total||0).toFixed(2)} EUR</span>
+</div>
+<div class="doc-info">
+<strong>${d.proveedor||'Sin proveedor'}</strong> | ${d.fecha_emision||'Sin fecha'} | ${d.obras?.nombre||'Sin obra'}
+</div>
+</div>`;
+}
+
+async function viewDocument(docId){
+const{data:doc}=await sb.from('documentos_compra').select('*,obras(nombre),trabajadores(nombre,apellidos),empresas(nombre)').eq('id',docId).single();
+if(!doc)return;
+const{data:partidas}=await sb.from('partidas_documento').select('*').eq('documento_id',docId);
+const badgeClass={'factura':'badge-factura','albaran':'badge-albaran','presupuesto':'badge-presupuesto'}[doc.tipo_documento]||'';
+let html=`<div style="margin-bottom:12px">
+<span class="badge ${badgeClass}" style="font-size:.9rem;padding:4px 12px">${doc.tipo_documento}</span>
+${doc.numero_documento?`<strong style="margin-left:8px">${doc.numero_documento}</strong>`:''}
+</div>
+<table style="margin-bottom:12px">
+<tr><td style="font-weight:600;width:120px">Proveedor</td><td>${doc.proveedor||'-'}</td></tr>
+<tr><td style="font-weight:600">Fecha emision</td><td>${doc.fecha_emision||'-'}</td></tr>
+<tr><td style="font-weight:600">Empresa</td><td>${doc.empresas?.nombre||'-'}</td></tr>
+<tr><td style="font-weight:600">Obra</td><td>${doc.obras?.nombre||'-'}</td></tr>
+<tr><td style="font-weight:600">Registrado por</td><td>${doc.trabajadores?.nombre||''} ${doc.trabajadores?.apellidos||''}</td></tr>
+${doc.observaciones?`<tr><td style="font-weight:600">Observaciones</td><td>${doc.observaciones}</td></tr>`:''}
+</table>`;
+if(doc.imagen_url){
+html+=`<div style="margin-bottom:12px"><strong>Foto del documento:</strong><br><a href="${doc.imagen_url}" target="_blank"><img src="${doc.imagen_url}" class="img-preview" style="max-height:300px"></a></div>`;
+}
+if(partidas&&partidas.length>0){
+html+='<h4 style="margin:12px 0 8px;color:#1a56db">Partidas</h4>';
+html+='<table><thead><tr><th>Descripcion</th><th>Cant.</th><th>Ud.</th><th>P. Unit.</th><th>Total</th></tr></thead><tbody>';
+partidas.forEach(p=>{
+html+=`<tr><td>${p.descripcion}</td><td>${p.cantidad}</td><td>${p.unidad||'ud'}</td><td>${parseFloat(p.precio_unitario).toFixed(2)}</td><td style="font-weight:600">${parseFloat(p.total_partida).toFixed(2)}</td></tr>`;
+});
+html+='</tbody></table>';
+}
+html+=`<div style="text-align:right;font-size:1.2rem;font-weight:700;margin-top:12px;color:#059669">TOTAL: ${parseFloat(doc.total||0).toFixed(2)} EUR</div>`;
+document.getElementById('doc-view-title').textContent='Detalle - '+doc.tipo_documento.charAt(0).toUpperCase()+doc.tipo_documento.slice(1);
+document.getElementById('doc-view-content').innerHTML=html;
+document.getElementById('doc-view-modal').classList.remove('hidden');
 }
 
 // === ENCARGADO FUNCTIONS ===
@@ -572,26 +830,25 @@ if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin partes recien
 el.innerHTML=data.map(p=>`<div class="parte-item"><div><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.fecha} | ${p.obras?.nombre||'Sin obra'} | ${p.hora_entrada||'--'} - ${p.hora_salida||'--'}</small></div><span class="badge ${p.hora_salida?'badge-green':'badge-red'}">${p.hora_salida?'Cerrado':'Abierto'}</span></div>`).join('');
 loadEncFiltroObras();
 }
-
 async function loadEncFiltroObras(){
 const{data}=await sb.from('obras').select('id,nombre').eq('empresa_id',encEmpresaId).eq('activa',true);
-const sel=document.getElementById('enc-filtro-obra');
-sel.innerHTML='<option value="">Todas</option>';
-if(data)data.forEach(o=>{sel.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
+['enc-filtro-obra','enc-doc-filtro-obra'].forEach(selId=>{
+const sel=document.getElementById(selId);
+if(sel){sel.innerHTML='<option value="">Todas</option>';
+if(data)data.forEach(o=>{sel.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});}
+});
 }
-
 async function loadEncPartes(){
-  let q=sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').eq('empresa_id',encEmpresaId).order('fecha',{ascending:false});
-  const desde=document.getElementById('enc-filtro-fecha-desde').value;
-  const hasta=document.getElementById('enc-filtro-fecha-hasta').value;
-  const obra=document.getElementById('enc-filtro-obra').value;
-  if(desde) q=q.gte('fecha',desde);
-  if(hasta) q=q.lte('fecha',hasta);
-  if(obra) q=q.eq('obra_id',obra);
-  const{data}=await q.limit(500);
-  document.querySelector('#enc-tabla-partes tbody').innerHTML=(data||[]).map(p=>`<tr><td>${p.fecha}</td><td>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</td><td>${p.obras?.nombre||'-'}</td><td>${p.hora_entrada||'-'}</td><td>${p.hora_salida||'-'}</td><td>${p.horas_extra}</td><td>${p.descripcion_trabajo||'-'}</td></tr>`).join('');
+let q=sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').eq('empresa_id',encEmpresaId).order('fecha',{ascending:false});
+const desde=document.getElementById('enc-filtro-fecha-desde').value;
+const hasta=document.getElementById('enc-filtro-fecha-hasta').value;
+const obra=document.getElementById('enc-filtro-obra').value;
+if(desde) q=q.gte('fecha',desde);
+if(hasta) q=q.lte('fecha',hasta);
+if(obra) q=q.eq('obra_id',obra);
+const{data}=await q.limit(500);
+document.querySelector('#enc-tabla-partes tbody').innerHTML=(data||[]).map(p=>`<tr><td>${p.fecha}</td><td>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</td><td>${p.obras?.nombre||'-'}</td><td>${p.hora_entrada||'-'}</td><td>${p.hora_salida||'-'}</td><td>${p.horas_extra}</td><td>${p.descripcion_trabajo||'-'}</td></tr>`).join('');
 }
-
 function encExportCSV(){
 const table=document.getElementById('enc-tabla-partes');
 const rows=[...table.querySelectorAll('tr')];
@@ -601,30 +858,30 @@ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=
 }
 
 function showEncTab(e,tab){
-      const fullTab=tab.startsWith('enc-')?tab:'enc-'+tab;
-      const tabs=['enc-dashboard','enc-partes','enc-fichajes','enc-trabajadores','enc-obras'];
-      tabs.forEach(t=>{const el=document.getElementById(t);if(el)el.classList.add('hidden');});
-      const target=document.getElementById(fullTab);
-      if(target)target.classList.remove('hidden');
-      if(e&&e.target){
-        const parent=e.target.parentElement;
-        if(parent)parent.querySelectorAll('button').forEach(b=>{b.style.background='';b.style.color='';});
-        e.target.style.background='#7c3aed';e.target.style.color='#fff';
-      }
-      if(fullTab==='enc-dashboard'&&typeof loadEncDashboard==='function')loadEncDashboard();
-      if(fullTab==='enc-trabajadores'&&typeof loadEncTrab==='function')loadEncTrab();
-      if(fullTab==='enc-partes'&&typeof loadEncPartes==='function')loadEncPartes();
-      if(fullTab==='enc-fichajes'&&typeof loadEncFichajes==='function')loadEncFichajes();
-      if(fullTab==='enc-obras'&&typeof loadEncObras==='function')loadEncObras();
-    }
+const fullTab=tab.startsWith('enc-')?tab:'enc-'+tab;
+const tabs=['enc-dashboard','enc-partes','enc-fichajes','enc-documentos','enc-trabajadores','enc-obras'];
+tabs.forEach(t=>{const el=document.getElementById(t);if(el)el.classList.add('hidden');});
+const target=document.getElementById(fullTab);
+if(target)target.classList.remove('hidden');
+if(e&&e.target){
+const parent=e.target.parentElement;
+if(parent)parent.querySelectorAll('button').forEach(b=>{b.style.background='';b.style.color='';});
+e.target.style.background='#7c3aed';e.target.style.color='#fff';
+}
+if(fullTab==='enc-dashboard')loadEncDashboard();
+if(fullTab==='enc-trabajadores')loadEncTrab();
+if(fullTab==='enc-partes')loadEncPartes();
+if(fullTab==='enc-fichajes')loadEncFichajes();
+if(fullTab==='enc-obras')loadEncObras();
+if(fullTab==='enc-documentos')loadEncDocs();
+}
 
 async function loadEncFichajes(){
 const today=new Date().toISOString().split('T')[0];
 const{data}=await sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').eq('empresa_id',encEmpresaId).eq('fecha',today).is('hora_salida',null);
 const el=document.getElementById('enc-fichajes-abiertos');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">No hay fichajes abiertos</p>';}
-el.innerHTML=data.map(p=>`<div class="fichaje-item"><div class="info"><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.obras?.nombre||'Sin obra'} | Entrada: ${p.hora_entrada}</small></div><div class="actions"><button class="btn-danger" onclick="cerrarFichajeId('${p.id}','enc')">Cerrar</button></div></div>`).join('');
-// Load selects
+else el.innerHTML=data.map(p=>`<div class="fichaje-item"><div class="info"><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.obras?.nombre||'Sin obra'} | Entrada: ${p.hora_entrada}</small></div><div class="actions"><button class="btn-danger" onclick="cerrarFichajeId('${p.id}','enc')">Cerrar</button></div></div>`).join('');
 const{data:trabs}=await sb.from('trabajadores').select('id,nombre,apellidos').eq('empresa_id',encEmpresaId).eq('activo',true);
 const selT=document.getElementById('enc-fichar-trabajador');
 selT.innerHTML='<option value="">Selecciona...</option>';
@@ -633,6 +890,29 @@ const{data:obras}=await sb.from('obras').select('id,nombre').eq('empresa_id',enc
 const selO=document.getElementById('enc-fichar-obra');
 selO.innerHTML='<option value="">Selecciona...</option>';
 if(obras)obras.forEach(o=>{selO.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
+}
+
+async function loadEncDocs(){
+let q=sb.from('documentos_compra').select('*,obras(nombre),trabajadores(nombre,apellidos)').eq('empresa_id',encEmpresaId).order('created_at',{ascending:false});
+const tipo=document.getElementById('enc-doc-filtro-tipo')?.value;
+const obra=document.getElementById('enc-doc-filtro-obra')?.value;
+if(tipo)q=q.eq('tipo_documento',tipo);
+if(obra)q=q.eq('obra_id',obra);
+const{data}=await q.limit(100);
+const el=document.getElementById('enc-docs-list');
+if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">Sin documentos</p>';return}
+el.innerHTML=data.map(d=>{
+const badgeClass={'factura':'badge-factura','albaran':'badge-albaran','presupuesto':'badge-presupuesto'}[d.tipo_documento]||'';
+return `<div class="doc-card" onclick="viewDocument('${d.id}')">
+<div class="doc-header">
+<span><span class="badge ${badgeClass}">${d.tipo_documento}</span> ${d.numero_documento||''}</span>
+<span class="doc-total">${parseFloat(d.total||0).toFixed(2)} EUR</span>
+</div>
+<div class="doc-info">
+<strong>${d.proveedor||'Sin proveedor'}</strong> | ${d.fecha_emision||'Sin fecha'} | ${d.obras?.nombre||'Sin obra'} | Por: ${d.trabajadores?.nombre||''} ${d.trabajadores?.apellidos||''}
+</div>
+</div>`;
+}).join('');
 }
 
 function showEncFormTrab(){document.getElementById('enc-form-trab').classList.toggle('hidden')}
@@ -647,7 +927,6 @@ document.getElementById('enc-form-trab').classList.add('hidden');
 ['enc-trab-nombre','enc-trab-apellidos','enc-trab-dni','enc-trab-pin'].forEach(id=>document.getElementById(id).value='');
 loadEncTrab();
 }
-
 async function loadEncTrab(){
 const{data}=await sb.from('trabajadores').select('*').eq('empresa_id',encEmpresaId).eq('activo',true).order('nombre');
 const el=document.getElementById('enc-lista-trab');
@@ -655,7 +934,6 @@ if(!data||data.length===0){el.innerHTML='<p style="color:#999">Sin trabajadores<
 el.innerHTML='<table><thead><tr><th>Nombre</th><th>DNI</th><th>PIN</th><th></th></tr></thead><tbody>'+
 data.map(t=>`<tr><td>${t.nombre} ${t.apellidos}</td><td>${t.dni||'-'}</td><td>${t.pin||'-'}</td><td><button class="btn-sm btn-danger" onclick="deleteTrabajador('${t.id}')">Borrar</button></td></tr>`).join('')+'</tbody></table>';
 }
-
 async function encGuardarObra(){
 const o={nombre:document.getElementById('enc-obra-nombre').value,empresa_id:encEmpresaId,
 ubicacion:document.getElementById('enc-obra-ubicacion').value,fecha_inicio:document.getElementById('enc-obra-inicio').value||null};
@@ -665,7 +943,6 @@ document.getElementById('enc-form-obra').classList.add('hidden');
 ['enc-obra-nombre','enc-obra-ubicacion'].forEach(id=>document.getElementById(id).value='');
 loadEncObras();
 }
-
 async function loadEncObras(){
 const{data}=await sb.from('obras').select('*').eq('empresa_id',encEmpresaId).eq('activa',true).order('nombre');
 const el=document.getElementById('enc-lista-obras');
@@ -687,7 +964,6 @@ await sb.from('partes').insert({empresa_id:empId,obra_id:obraId||null,trabajador
 showMsg(prefix+'-fichar-msg','Entrada registrada a las '+hora,'ok');
 if(role==='admin')loadAdminFichajes();else loadEncFichajes();
 }
-
 async function cerrarFichajePorTrabajador(role){
 const prefix=role==='admin'?'admin':'enc';
 const trabId=document.getElementById(prefix+'-fichar-trabajador').value;
@@ -700,13 +976,11 @@ await sb.from('partes').update({hora_salida:hora}).eq('id',data[0].id);
 showMsg(prefix+'-fichar-msg','Fichaje cerrado a las '+hora,'ok');
 if(role==='admin')loadAdminFichajes();else loadEncFichajes();
 }
-
 async function cerrarFichajeId(id,role){
 const now=new Date();const hora=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
 await sb.from('partes').update({hora_salida:hora}).eq('id',id);
 if(role==='admin')loadAdminFichajes();else loadEncFichajes();
 }
-
 async function loadTrabajadoresParaFichar(role){
 const prefix=role==='admin'?'admin':'enc';
 const empId=role==='admin'?document.getElementById('admin-fichar-empresa').value:encEmpresaId;
@@ -746,8 +1020,7 @@ const today=new Date().toISOString().split('T')[0];
 const{data}=await sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre),empresas(nombre)').eq('fecha',today).is('hora_salida',null);
 const el=document.getElementById('admin-fichajes-abiertos');
 if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">No hay fichajes abiertos</p>';}
-el.innerHTML=data.map(p=>`<div class="fichaje-item"><div class="info"><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.empresas?.nombre||'-'} | ${p.obras?.nombre||'Sin obra'} | Entrada: ${p.hora_entrada}</small></div><div class="actions"><button class="btn-danger" onclick="cerrarFichajeId('${p.id}','admin')">Cerrar</button></div></div>`).join('');
-// Load empresa select for fichar
+else el.innerHTML=data.map(p=>`<div class="fichaje-item"><div class="info"><strong>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</strong><br><small>${p.empresas?.nombre||'-'} | ${p.obras?.nombre||'Sin obra'} | Entrada: ${p.hora_entrada}</small></div><div class="actions"><button class="btn-danger" onclick="cerrarFichajeId('${p.id}','admin')">Cerrar</button></div></div>`).join('');
 const{data:emps}=await sb.from('empresas').select('id,nombre').eq('activa',true);
 const selE=document.getElementById('admin-fichar-empresa');
 selE.innerHTML='<option value="">Selecciona empresa...</option>';
@@ -756,21 +1029,23 @@ if(emps)emps.forEach(e=>{selE.innerHTML+=`<option value="${e.id}">${e.nombre}</o
 
 async function loadFiltroEmpresas(){
 const{data}=await sb.from('empresas').select('id,nombre');
-const sel=document.getElementById('filtro-empresa');
-sel.innerHTML='<option value="">Todas</option>';
-if(data)data.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nombre}</option>`});
+['filtro-empresa','admin-doc-filtro-empresa'].forEach(selId=>{
+const sel=document.getElementById(selId);
+if(sel){sel.innerHTML='<option value="">Todas</option>';
+if(data)data.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nombre}</option>`});}
+});
 }
 
 async function loadAdminPartes(){
-  let q=sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').order('fecha',{ascending:false});
-  const desde=document.getElementById('filtro-fecha-desde').value;
-  const hasta=document.getElementById('filtro-fecha-hasta').value;
-  const emp=document.getElementById('filtro-empresa').value;
-  if(desde) q=q.gte('fecha',desde);
-  if(hasta) q=q.lte('fecha',hasta);
-  if(emp) q=q.eq('empresa_id',emp);
-  const{data}=await q.limit(500);
-  document.querySelector('#tabla-partes tbody').innerHTML=(data||[]).map(p=>`<tr><td>${p.fecha}</td><td>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</td><td>${p.obras?.nombre||'-'}</td><td>${p.hora_entrada||'-'}</td><td>${p.hora_salida||'-'}</td><td>${p.horas_extra}</td><td>${p.descripcion_trabajo||'-'}</td></tr>`).join('');
+let q=sb.from('partes').select('*,trabajadores(nombre,apellidos),obras(nombre)').order('fecha',{ascending:false});
+const desde=document.getElementById('filtro-fecha-desde').value;
+const hasta=document.getElementById('filtro-fecha-hasta').value;
+const emp=document.getElementById('filtro-empresa').value;
+if(desde) q=q.gte('fecha',desde);
+if(hasta) q=q.lte('fecha',hasta);
+if(emp) q=q.eq('empresa_id',emp);
+const{data}=await q.limit(500);
+document.querySelector('#tabla-partes tbody').innerHTML=(data||[]).map(p=>`<tr><td>${p.fecha}</td><td>${p.trabajadores?.nombre} ${p.trabajadores?.apellidos}</td><td>${p.obras?.nombre||'-'}</td><td>${p.hora_entrada||'-'}</td><td>${p.hora_salida||'-'}</td><td>${p.horas_extra}</td><td>${p.descripcion_trabajo||'-'}</td></tr>`).join('');
 }
 
 function exportCSV(){
@@ -780,25 +1055,73 @@ const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='partes_'+new Date().toISOString().split('T')[0]+'.csv';a.click();
 }
 
+async function loadAdminDocs(){
+let q=sb.from('documentos_compra').select('*,obras(nombre),trabajadores(nombre,apellidos),empresas(nombre)').order('created_at',{ascending:false});
+const emp=document.getElementById('admin-doc-filtro-empresa')?.value;
+const tipo=document.getElementById('admin-doc-filtro-tipo')?.value;
+const obra=document.getElementById('admin-doc-filtro-obra')?.value;
+if(emp)q=q.eq('empresa_id',emp);
+if(tipo)q=q.eq('tipo_documento',tipo);
+if(obra)q=q.eq('obra_id',obra);
+const{data}=await q.limit(200);
+const el=document.getElementById('admin-docs-list');
+if(!data||data.length===0){el.innerHTML='<p style="color:#999;text-align:center">Sin documentos</p>';return}
+el.innerHTML=data.map(d=>{
+const badgeClass={'factura':'badge-factura','albaran':'badge-albaran','presupuesto':'badge-presupuesto'}[d.tipo_documento]||'';
+return `<div class="doc-card" onclick="viewDocument('${d.id}')">
+<div class="doc-header">
+<span><span class="badge ${badgeClass}">${d.tipo_documento}</span> ${d.numero_documento||''}</span>
+<span class="doc-total">${parseFloat(d.total||0).toFixed(2)} EUR</span>
+</div>
+<div class="doc-info">
+<strong>${d.proveedor||'Sin proveedor'}</strong> | ${d.fecha_emision||'Sin fecha'} | ${d.empresas?.nombre||'-'} | ${d.obras?.nombre||'Sin obra'} | Por: ${d.trabajadores?.nombre||''} ${d.trabajadores?.apellidos||''}
+</div>
+</div>`;
+}).join('');
+}
+
+async function loadAdminDocObras(){
+const{data}=await sb.from('obras').select('id,nombre').eq('activa',true);
+const sel=document.getElementById('admin-doc-filtro-obra');
+if(sel){sel.innerHTML='<option value="">Todas</option>';
+if(data)data.forEach(o=>{sel.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});}
+}
+
+function exportDocsCSV(role){
+const prefix=role==='admin'?'admin':'enc';
+const cards=document.querySelectorAll('#'+prefix+'-docs-list .doc-card');
+let csv='"Tipo","Numero","Proveedor","Fecha","Obra","Total"\n';
+cards.forEach(c=>{
+const tipo=c.querySelector('.badge')?.textContent||'';
+const header=c.querySelector('.doc-header')?.textContent||'';
+const info=c.querySelector('.doc-info')?.textContent||'';
+const total=c.querySelector('.doc-total')?.textContent||'';
+csv+='"'+tipo+'","","'+info.split('|')[0].trim()+'","","","'+total+'"\n';
+});
+const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='documentos_'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+}
+
 function showAdminTab(e,tab){
-      const fullTab=tab.startsWith('admin-')?tab:'admin-'+tab;
-      const tabs=['admin-dashboard','admin-partes','admin-fichajes','admin-trabajadores','admin-obras','admin-empresas','admin-encargados'];
-      tabs.forEach(t=>{const el=document.getElementById(t);if(el)el.classList.add('hidden');});
-      const target=document.getElementById(fullTab);
-      if(target)target.classList.remove('hidden');
-      if(e&&e.target){
-        const parent=e.target.parentElement;
-        if(parent)parent.querySelectorAll('button').forEach(b=>{b.style.background='';b.style.color='';});
-        e.target.style.background='#1d4ed8';e.target.style.color='#fff';
-      }
-      if(fullTab==='admin-dashboard'&&typeof loadDashboard==='function')loadDashboard();
-      if(fullTab==='admin-trabajadores'&&typeof loadTrabajadores==='function')loadTrabajadores();
-      if(fullTab==='admin-partes'&&typeof loadAdminPartes==='function')loadFiltroEmpresas();loadAdminPartes();
-      if(fullTab==='admin-fichajes'&&typeof loadAdminFichajes==='function')loadAdminFichajes();
-      if(fullTab==='admin-obras'&&typeof loadObras==='function')loadObras();
-      if(fullTab==='admin-empresas'&&typeof loadEmpresas==='function')loadEmpresas();
-      if(fullTab==='admin-encargados'&&typeof loadEncargados==='function')loadEncargados();
-    }
+const fullTab=tab.startsWith('admin-')?tab:'admin-'+tab;
+const tabs=['admin-dashboard','admin-partes','admin-fichajes','admin-documentos','admin-trabajadores','admin-obras','admin-empresas','admin-encargados'];
+tabs.forEach(t=>{const el=document.getElementById(t);if(el)el.classList.add('hidden');});
+const target=document.getElementById(fullTab);
+if(target)target.classList.remove('hidden');
+if(e&&e.target){
+const parent=e.target.parentElement;
+if(parent)parent.querySelectorAll('button').forEach(b=>{b.style.background='';b.style.color='';});
+e.target.style.background='#1d4ed8';e.target.style.color='#fff';
+}
+if(fullTab==='admin-dashboard')loadDashboard();
+if(fullTab==='admin-trabajadores')loadTrabajadores();
+if(fullTab==='admin-partes'){loadFiltroEmpresas();loadAdminPartes();}
+if(fullTab==='admin-fichajes')loadAdminFichajes();
+if(fullTab==='admin-obras')loadObras();
+if(fullTab==='admin-empresas')loadEmpresas();
+if(fullTab==='admin-encargados')loadEncargados();
+if(fullTab==='admin-documentos'){loadFiltroEmpresas();loadAdminDocObras();loadAdminDocs();}
+}
 
 function showFormTrabajador(){document.getElementById('form-trabajador').classList.toggle('hidden');loadEmpresasSelect('trab-empresa')}
 function showFormObra(){document.getElementById('form-obra').classList.toggle('hidden');loadEmpresasSelect('obra-empresa')}
@@ -883,27 +1206,24 @@ el.innerHTML=`<div class="msg msg-${type}">${msg}</div>`;
 setTimeout(()=>el.innerHTML='',3000);
 }
 
+async function deleteTrabajador(id){
+if(!confirm('Seguro que quieres borrar este trabajador? Se eliminaran tambien sus partes.')) return;
+await sb.from('partes').delete().eq('trabajador_id',id);
+await sb.from('documentos_compra').delete().eq('trabajador_id',id);
+await sb.from('trabajadores').delete().eq('id',id);
+alert('Trabajador eliminado');
+if(typeof loadTrabajadores==='function') loadTrabajadores();
+if(typeof loadEncTrab==='function') loadEncTrab();
+}
+
+async function deleteEncargado(id){
+if(!confirm('Seguro que quieres borrar este encargado?')) return;
+await sb.from('encargados').delete().eq('id',id);
+alert('Encargado eliminado');
+if(typeof loadEncargados==='function') loadEncargados();
+}
+
 init();
-
-
-    async function deleteTrabajador(id){
-      if(!confirm('¿Seguro que quieres borrar este trabajador? Se eliminarán también sus partes.')) return;
-      const{error:err1}=await sb.from('partes').delete().eq('trabajador_id',id);
-      const{error}=await sb.from('trabajadores').delete().eq('id',id);
-      if(error){alert('Error: '+error.message);return;}
-      alert('Trabajador eliminado');
-      if(typeof loadTrabajadores==='function') loadTrabajadores();
-      if(typeof loadEncTrab==='function') loadEncTrab();
-    }
-
-    async function deleteEncargado(id){
-      if(!confirm('¿Seguro que quieres borrar este encargado?')) return;
-      const{error}=await sb.from('encargados').delete().eq('id',id);
-      if(error){alert('Error: '+error.message);return;}
-      alert('Encargado eliminado');
-      if(typeof loadEncargados==='function') loadEncargados();
-    }
-
-    </script>
+</script>
 </body>
 </html>

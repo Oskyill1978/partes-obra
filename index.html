@@ -212,14 +212,6 @@ th{background:#f9fafb;font-weight:600}
 <option value="albaran">Albaran</option>
 <option value="presupuesto">Presupuesto</option>
 </select>
-<label>Proveedor</label>
-<input id="doc-proveedor" placeholder="Nombre del proveedor">
-<div class="row">
-<div><label>N. Documento</label><input id="doc-numero" placeholder="Ej: F-2026-001"></div>
-<div><label>Fecha emision</label><input type="date" id="doc-fecha"></div>
-</div>
-<label>Obra (opcional)</label>
-<select id="doc-obra"><option value="">Sin asignar</option></select>
 <label>Foto del documento</label>
 <div class="capture-options">
 <label>
@@ -617,10 +609,6 @@ const{data}=await sb.from('obras').select('id,nombre').eq('empresa_id',currentEm
 const sel=document.getElementById('parte-obra');
 sel.innerHTML='<option value="">Selecciona obra...</option>';
 if(data)data.forEach(o=>{sel.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
-// Also load for doc form
-const docSel=document.getElementById('doc-obra');
-docSel.innerHTML='<option value="">Sin asignar</option>';
-if(data)data.forEach(o=>{docSel.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
 const wDocSel=document.getElementById('w-doc-filtro-obra');
 wDocSel.innerHTML='<option value="">Todas</option>';
 if(data)data.forEach(o=>{wDocSel.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
@@ -707,12 +695,7 @@ document.getElementById('doc-total-display').textContent=total.toFixed(2);
 
 async function guardarDocumento(){
 const tipo=document.getElementById('doc-tipo').value;
-const proveedor=document.getElementById('doc-proveedor').value;
-const numero=document.getElementById('doc-numero').value;
-const fecha=document.getElementById('doc-fecha').value;
-const obraId=document.getElementById('doc-obra').value||null;
 const obs=document.getElementById('doc-observaciones').value;
-if(!proveedor){showMsg('doc-msg','Introduce el proveedor','err');return}
 let imagenUrl=null;
 if(docFotoFile){
 const ext=docFotoFile.name.split('.').pop();
@@ -723,8 +706,8 @@ const{data:urlData}=sb.storage.from('documentos').getPublicUrl(fileName);
 imagenUrl=urlData.publicUrl;
 }
 const totalDoc=parseFloat(document.getElementById('doc-total-display').textContent)||0;
-const doc={empresa_id:currentEmpresa,obra_id:obraId,trabajador_id:currentWorker.id,tipo_documento:tipo,
-numero_documento:numero,proveedor:proveedor,fecha_emision:fecha||null,observaciones:obs,imagen_url:imagenUrl,total:totalDoc};
+const doc={empresa_id:currentEmpresa,obra_id:null,trabajador_id:currentWorker.id,tipo_documento:tipo,
+numero_documento:null,proveedor:null,fecha_emision:null,observaciones:obs,imagen_url:imagenUrl,total:totalDoc};
 const{data:inserted,error}=await sb.from('documentos_compra').insert(doc).select().single();
 if(error){showMsg('doc-msg','Error al guardar: '+error.message,'err');return}
 // Save partidas
@@ -743,9 +726,6 @@ loadWorkerDocs();
 }
 
 function resetDocForm(){
-document.getElementById('doc-proveedor').value='';
-document.getElementById('doc-numero').value='';
-document.getElementById('doc-fecha').value='';
 document.getElementById('doc-observaciones').value='';
 document.getElementById('doc-foto-preview').innerHTML='';
 document.getElementById('doc-partidas-list').innerHTML='';

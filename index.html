@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+h<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -105,8 +105,8 @@ th{background:#f9fafb;font-weight:600}
 <div id="login-screen" class="login-screen">
 <h2>Acceso Trabajador</h2>
 <select id="login-empresa" class="hidden"></select>
-<label>PIN de acceso</label>
-<input type="password" id="login-pin" maxlength="4" placeholder="****">
+<label>PIN de acceso (6 dígitos)</label>
+<input type="password" id="login-pin" maxlength="6" placeholder="******">
 <br>
 <button class="btn btn-primary" style="max-width:300px" onclick="loginWorker()">Entrar</button>
 <br><br>
@@ -322,7 +322,7 @@ Total: <span id="doc-total-display">0.00</span> EUR
 <button class="btn btn-encargado" style="margin-bottom:12px" onclick="showEncFormTrab()">+ Nuevo Trabajador</button>
 <div id="enc-form-trab" class="hidden" style="border:1px solid #ddd;padding:12px;border-radius:6px;margin-bottom:12px">
 <div class="row"><div><label>Nombre</label><input id="enc-trab-nombre"></div><div><label>Apellidos</label><input id="enc-trab-apellidos"></div></div>
-<div class="row"><div><label>DNI</label><input id="enc-trab-dni"></div><div><label>PIN</label><input id="enc-trab-pin" maxlength="4"></div></div>
+<div class="row"><div><label>DNI</label><input id="enc-trab-dni"></div><div><label>PIN</label><input id="enc-trab-pin" maxlength="6" placeholder="6 dígitos"></div></div>
 <button class="btn btn-success" onclick="encGuardarTrab()">Guardar</button>
 </div>
 <div id="enc-lista-trab"></div>
@@ -419,7 +419,7 @@ Total: <span id="doc-total-display">0.00</span> EUR
 <div id="form-trabajador" class="hidden" style="border:1px solid #ddd;padding:12px;border-radius:6px;margin-bottom:12px">
 <div class="row"><div><label>Nombre</label><input id="trab-nombre"></div><div><label>Apellidos</label><input id="trab-apellidos"></div></div>
 <label>Empresa</label><select id="trab-empresa"></select>
-<div class="row"><div><label>DNI</label><input id="trab-dni"></div><div><label>PIN</label><input id="trab-pin" maxlength="4"></div></div>
+<div class="row"><div><label>DNI</label><input id="trab-dni"></div><div><label>PIN</label><input id="trab-pin" maxlength="6" placeholder="6 dígitos"></div></div>
 <button class="btn btn-success" onclick="guardarTrabajador()">Guardar</button>
 </div>
 <div id="lista-trabajadores"></div>
@@ -485,9 +485,23 @@ if(data)data.forEach(e=>{sel.innerHTML+=`<option value="${e.id}">${e.nombre}</op
 });
 }
 
+function validarPin(pin) {
+if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) return 'El PIN debe tener exactamente 6 dígitos numéricos';
+if (/^(\d)\1{5}$/.test(pin)) return 'PIN no permitido: todos los dígitos iguales';
+const seq = '0123456789';
+const rseq = '9876543210';
+for (let i = 0; i <= seq.length - 6; i++) {
+if (pin === seq.substring(i, i + 6) || pin === rseq.substring(i, i + 6)) return 'PIN no permitido: secuencia consecutiva';
+}
+const half = pin.substring(0, 3);
+if (pin === half + half) return 'PIN no permitido: patrón repetitivo';
+const pair = pin.substring(0, 2);
+if (pin === pair + pair + pair) return 'PIN no permitido: patrón repetitivo';
+return null;
+}
 async function loginWorker(){
 const pin=document.getElementById('login-pin').value;
-if(!pin){showMsg('login-msg','Introduce tu PIN','err');return;}
+if(!pin||pin.length!==6){showMsg('login-msg','Introduce tu PIN de 6 dígitos','err');return;}
 const{data,error}=await sb.from('trabajadores').select('*').eq('pin',pin).eq('activo',true);
 if(error||!data||data.length===0){showMsg('login-msg','PIN incorrecto','err');return;}
 if(data.length>1){showMsg('login-msg','PIN duplicado, contacta con el admin','err');return;}
@@ -902,6 +916,7 @@ async function encGuardarTrab(){
 const t={nombre:document.getElementById('enc-trab-nombre').value,apellidos:document.getElementById('enc-trab-apellidos').value,
 empresa_id:encEmpresaId,dni:document.getElementById('enc-trab-dni').value,pin:document.getElementById('enc-trab-pin').value};
 if(!t.nombre||!t.apellidos){alert('Rellena nombre y apellidos');return}
+const pinErr=validarPin(t.pin);if(pinErr){alert(pinErr);return;}
 await sb.from('trabajadores').insert(t);
 document.getElementById('enc-form-trab').classList.add('hidden');
 ['enc-trab-nombre','enc-trab-apellidos','enc-trab-dni','enc-trab-pin'].forEach(id=>document.getElementById(id).value='');
@@ -1119,6 +1134,7 @@ async function guardarTrabajador(){
 const t={nombre:document.getElementById('trab-nombre').value,apellidos:document.getElementById('trab-apellidos').value,
 empresa_id:document.getElementById('trab-empresa').value,dni:document.getElementById('trab-dni').value,pin:document.getElementById('trab-pin').value};
 if(!t.nombre||!t.apellidos||!t.empresa_id){alert('Rellena nombre, apellidos y empresa');return}
+const pinErr=validarPin(t.pin);if(pinErr){alert(pinErr);return;}
 await sb.from('trabajadores').insert(t);
 document.getElementById('form-trabajador').classList.add('hidden');loadTrabajadores();
 }

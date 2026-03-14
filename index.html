@@ -196,6 +196,13 @@ th{background:#f9fafb;font-weight:600}
 <textarea id="parte-materiales" placeholder="Materiales utilizados..."></textarea>
 <label>Observaciones</label>
 <textarea id="parte-observaciones" placeholder="Notas adicionales..."></textarea>
+<div>
+  <label>📸 Fotos del trabajo * <span style="font-size:10px;color:#888;">(enlace Drive, WhatsApp, etc.)</span></label>
+  <textarea id="p-fotos" rows="2" placeholder="Pega aquí el enlace de las fotos o describe dónde están..."></textarea>
+  <div id="p-fotos-error" style="display:none;color:#ff4444;font-size:11px;margin-top:4px;">
+    ⚠ Debes añadir el enlace o referencia de las fotos antes de cerrar el parte.
+  </div>
+</div>
 <button class="btn btn-success" onclick="guardarParte()">Guardar Parte</button>
 <div id="parte-msg"></div>
 </div>
@@ -633,11 +640,11 @@ const parte={empresa_id:currentEmpresa,obra_id:document.getElementById('parte-ob
 fecha:new Date().toISOString().split('T')[0],hora_entrada:document.getElementById('parte-entrada').value||null,
 hora_salida:document.getElementById('parte-salida').value||null,horas_extra:parseFloat(document.getElementById('parte-extras').value)||0,
 descripcion_trabajo:document.getElementById('parte-descripcion').value,materiales:document.getElementById('parte-materiales').value,
-observaciones:document.getElementById('parte-observaciones').value};
+observaciones:document.getElementById('parte-observaciones').value,fotos:fotos};
 const{error}=await sb.from('partes').insert(parte);
 if(error){showMsg('parte-msg','Error al guardar','err');return}
 showMsg('parte-msg','Parte guardado correctamente','ok');
-['parte-descripcion','parte-materiales','parte-observaciones'].forEach(id=>document.getElementById(id).value='');
+['parte-descripcion','parte-materiales','parte-observaciones','p-fotos'].forEach(id=>document.getElementById(id).value='');
 document.getElementById('parte-extras').value='0';
 loadHistorial();checkOpenFichaje();
 }

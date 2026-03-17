@@ -182,7 +182,7 @@ th{background:#f9fafb;font-weight:600}
 <div id="worker-nuevo">
 <div class="card">
 <h3>Nuevo Parte de Trabajo</h3>
-<label>Obra</label>
+<label>Obra <span style="color:#dc2626;font-weight:700">*</span></label>
 <select id="parte-obra"></select>
 <div class="row">
 <div><label>Hora entrada</label><input type="time" id="parte-entrada"></div>
@@ -672,7 +672,7 @@ w.document.close();w.print();
 async function loadObrasWorker(){
 const{data}=await sb.from('obras').select('id,nombre').eq('empresa_id',currentEmpresa).eq('activa',true);
 const sel=document.getElementById('parte-obra');
-sel.innerHTML='<option value="">Selecciona obra...</option>';
+sel.innerHTML='<option value="">-- Selecciona obra (obligatorio) --</option>';
 if(data)data.forEach(o=>{sel.innerHTML+=`<option value="${o.id}">${o.nombre}</option>`});
 const wDocSel=document.getElementById('w-doc-filtro-obra');
 wDocSel.innerHTML='<option value="">Todas</option>';
@@ -680,6 +680,15 @@ if(data)data.forEach(o=>{wDocSel.innerHTML+=`<option value="${o.id}">${o.nombre}
 }
 
 async function guardarParte(){
+ const obraSeleccionada=document.getElementById('parte-obra').value;
+ if(!obraSeleccionada){
+   const sel=document.getElementById('parte-obra');
+   sel.style.border='2px solid #dc2626';
+   sel.scrollIntoView({behavior:'smooth',block:'center'});
+   showMsg('parte-msg','Es obligatorio seleccionar una obra antes de guardar el parte.','err');
+   return;
+ }
+ document.getElementById('parte-obra').style.border='';
  const obraIdFoto=document.getElementById('parte-obra').value;
  const fechaFoto=new Date().toISOString().split('T')[0];
  const fotosUrls=fotosFiles&&fotosFiles.length>0?await subirFotosPartes(obraIdFoto,currentEmpresa,fechaFoto):'';

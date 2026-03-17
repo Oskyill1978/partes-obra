@@ -197,12 +197,19 @@ th{background:#f9fafb;font-weight:600}
 <label>Observaciones</label>
 <textarea id="parte-observaciones" placeholder="Notas adicionales..."></textarea>
 <div>
-  <label>📸 Fotos del trabajo * <span style="font-size:10px;color:#888;">(enlace Drive, WhatsApp, etc.)</span></label>
-  <textarea id="p-fotos" rows="2" placeholder="Pega aquí el enlace de las fotos o describe dónde están..."></textarea>
-  <div id="p-fotos-error" style="display:none;color:#ff4444;font-size:11px;margin-top:4px;">
-    ⚠ Debes añadir el enlace o referencia de las fotos antes de cerrar el parte.
-  </div>
-</div>
+                <label>📸 Fotos del trabajo</label>
+                <div class="capture-options">
+                  <label>
+                    <input type="file" id="p-fotos-camara" accept="image/*" capture="environment" multiple onchange="previewFotos(this)">
+                    📷 Hacer foto
+                  </label>
+                  <label>
+                    <input type="file" id="p-fotos-galeria" accept="image/*" multiple onchange="previewFotos(this)">
+                    🖼️ Galería
+                  </label>
+                </div>
+                <div id="p-fotos-preview" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+              </div>
 <button class="btn btn-success" onclick="guardarParte()">Guardar Parte</button>
 <div id="parte-msg"></div>
 </div>
@@ -483,6 +490,43 @@ const ADMIN_PASS='admin2026';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let currentWorker=null;let currentEmpresa=null;let currentEncargado=null;let encEmpresaId=null;let qrScanner=null;let docFotoFile=null;let partidaCounter=0;
 
+
+// === FOTOS PARTES ===
+let fotosFiles=[];
+function previewFotos(input){
+  if(!input.files||input.files.length===0)return;
+  fotosFiles=[...(fotosFiles||[]),...input.files];
+  const prev=document.getElementById('p-fotos-preview');
+  prev.innerHTML=fotosFiles.map((f,i)=>`<div style="display:inline-block;position:relative;margin:2px">
+    <img src="${URL.createObjectURL(f)}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #ddd">
+    <button onclick="removeFoto(${i})" style="position:absolute;top:-5px;right:-5px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;line-height:1;cursor:pointer">×</button>
+  </div>`).join('');
+}
+function removeFoto(i){
+  fotosFiles.splice(i,1);
+  const prev=document.getElementById('p-fotos-preview');
+  if(prev)prev.innerHTML=fotosFiles.map((f,j)=>`<div style="display:inline-block;position:relative;margin:2px">
+    <img src="${URL.createObjectURL(f)}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #ddd">
+    <button onclick="removeFoto(${j})" style="position:absolute;top:-5px;right:-5px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;line-height:1;cursor:pointer">×</button>
+  </div>`).join('');
+}
+async function subirFotosPartes(obraId,empresaId,fecha){
+  const urls=[];
+  const btn=document.querySelector('#worker-nuevo .btn-success');
+  if(btn){btn.textContent='Subiendo fotos...';btn.disabled=true;}
+  for(const file of fotosFiles){
+    const ext=file.name.split('.').pop()||'jpg';
+    const path=`${empresaId}/${obraId||'sin-obra'}/${fecha}/${Date.now()}_${Math.random().toString(36).substr(2,5)}.${ext}`;
+    const{error}=await sb.storage.from('fotos-partes').upload(path,file,{cacheControl:'3600',upsert:false});
+    if(!error){const{data:u}=sb.storage.from('fotos-partes').getPublicUrl(path);urls.push(u.publicUrl);}
+    else{console.error('Error subiendo foto:',error);}
+  }
+  fotosFiles=[];
+  const prev=document.getElementById('p-fotos-preview');
+  if(prev)prev.innerHTML='';
+  if(btn){btn.textContent='Guardar Parte';btn.disabled=false;}
+  return urls.join(',');
+}
 async function init(){
 const{data}=await sb.from('empresas').select('id,nombre').eq('activa',true);
 ['login-empresa','enc-login-empresa'].forEach(id=>{
@@ -636,15 +680,18 @@ if(data)data.forEach(o=>{wDocSel.innerHTML+=`<option value="${o.id}">${o.nombre}
 }
 
 async function guardarParte(){
+ const obraIdFoto=document.getElementById('parte-obra').value;
+ const fechaFoto=new Date().toISOString().split('T')[0];
+ const fotosUrls=fotosFiles&&fotosFiles.length>0?await subirFotosPartes(obraIdFoto,currentEmpresa,fechaFoto):'';
 const parte={empresa_id:currentEmpresa,obra_id:document.getElementById('parte-obra').value||null,trabajador_id:currentWorker.id,
 fecha:new Date().toISOString().split('T')[0],hora_entrada:document.getElementById('parte-entrada').value||null,
 hora_salida:document.getElementById('parte-salida').value||null,horas_extra:parseFloat(document.getElementById('parte-extras').value)||0,
 descripcion_trabajo:document.getElementById('parte-descripcion').value,materiales:document.getElementById('parte-materiales').value,
-observaciones:document.getElementById('parte-observaciones').value,fotos:fotos};
+observaciones:document.getElementById('parte-observaciones').value,fotos:fotosUrls};
 const{error}=await sb.from('partes').insert(parte);
 if(error){showMsg('parte-msg','Error al guardar','err');return}
 showMsg('parte-msg','Parte guardado correctamente','ok');
-['parte-descripcion','parte-materiales','parte-observaciones','p-fotos'].forEach(id=>document.getElementById(id).value='');
+['parte-descripcion','parte-materiales','parte-observaciones'].forEach(id=>document.getElementById(id).value='');
 document.getElementById('parte-extras').value='0';
 loadHistorial();checkOpenFichaje();
 }
